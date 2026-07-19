@@ -105,6 +105,12 @@ pub use self::{PostgresStorage, PostgresStorageError};
 pub use get_chat_id::GetChatId;
 pub use storage::*;
 
+pub mod strategy;
+pub use strategy::{
+    ChatStrategy, DialogueKey, DialogueStrategy, GlobalUserStrategy, StrategyStorage,
+    UserInChatStrategy, UserInTopicStrategy, ChatTopicStrategy,
+};
+
 use dptree::Handler;
 use teloxide_core::types::ChatId;
 
