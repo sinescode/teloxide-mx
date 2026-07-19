@@ -44,7 +44,7 @@
 use std::{collections::HashMap, hash::Hash, marker::PhantomData, sync::Arc};
 
 use futures::future::BoxFuture;
-use teloxide_core::types::{ChatId, MessageThreadId, UserId};
+use teloxide_core::types::{ChatId, MessageId, ThreadId, UserId};
 use tokio::sync::Mutex;
 
 use super::Storage;
@@ -60,26 +60,18 @@ pub struct DialogueKey {
     /// The user ID (optional, for per-user strategies).
     pub user_id: Option<UserId>,
     /// The thread/topic ID (optional, for topic-aware strategies).
-    pub thread_id: Option<MessageThreadId>,
+    pub thread_id: Option<ThreadId>,
 }
 
 impl DialogueKey {
     /// Creates a key from just a chat ID.
     pub fn from_chat(chat_id: ChatId) -> Self {
-        Self {
-            chat_id,
-            user_id: None,
-            thread_id: None,
-        }
+        Self { chat_id, user_id: None, thread_id: None }
     }
 
     /// Creates a key from chat + user IDs.
     pub fn from_user_in_chat(chat_id: ChatId, user_id: UserId) -> Self {
-        Self {
-            chat_id,
-            user_id: Some(user_id),
-            thread_id: None,
-        }
+        Self { chat_id, user_id: Some(user_id), thread_id: None }
     }
 
     /// Creates a key from a global user ID.
@@ -92,21 +84,13 @@ impl DialogueKey {
     }
 
     /// Creates a key from chat + user + thread IDs.
-    pub fn from_user_in_topic(chat_id: ChatId, user_id: UserId, thread_id: MessageThreadId) -> Self {
-        Self {
-            chat_id,
-            user_id: Some(user_id),
-            thread_id: Some(thread_id),
-        }
+    pub fn from_user_in_topic(chat_id: ChatId, user_id: UserId, thread_id: ThreadId) -> Self {
+        Self { chat_id, user_id: Some(user_id), thread_id: Some(thread_id) }
     }
 
     /// Creates a key from chat + thread IDs.
-    pub fn from_chat_topic(chat_id: ChatId, thread_id: MessageThreadId) -> Self {
-        Self {
-            chat_id,
-            user_id: None,
-            thread_id: Some(thread_id),
-        }
+    pub fn from_chat_topic(chat_id: ChatId, thread_id: ThreadId) -> Self {
+        Self { chat_id, user_id: None, thread_id: Some(thread_id) }
     }
 }
 
@@ -115,7 +99,11 @@ impl DialogueKey {
 /// Different strategies implement this to determine how state is scoped.
 pub trait DialogueStrategy: Send + Sync + 'static {
     /// Extracts a dialogue key from an update context.
-    fn extract_key(chat_id: ChatId, user_id: Option<UserId>, thread_id: Option<MessageThreadId>) -> DialogueKey;
+    fn extract_key(
+        chat_id: ChatId,
+        user_id: Option<UserId>,
+        thread_id: Option<ThreadId>,
+    ) -> DialogueKey;
 }
 
 /// State is stored per chat (default teloxide behavior).
@@ -124,7 +112,11 @@ pub trait DialogueStrategy: Send + Sync + 'static {
 pub struct ChatStrategy;
 
 impl DialogueStrategy for ChatStrategy {
-    fn extract_key(chat_id: ChatId, _user_id: Option<UserId>, _thread_id: Option<MessageThreadId>) -> DialogueKey {
+    fn extract_key(
+        chat_id: ChatId,
+        _user_id: Option<UserId>,
+        _thread_id: Option<ThreadId>,
+    ) -> DialogueKey {
         DialogueKey::from_chat(chat_id)
     }
 }
@@ -135,7 +127,11 @@ impl DialogueStrategy for ChatStrategy {
 pub struct UserInChatStrategy;
 
 impl DialogueStrategy for UserInChatStrategy {
-    fn extract_key(chat_id: ChatId, user_id: Option<UserId>, _thread_id: Option<MessageThreadId>) -> DialogueKey {
+    fn extract_key(
+        chat_id: ChatId,
+        user_id: Option<UserId>,
+        _thread_id: Option<ThreadId>,
+    ) -> DialogueKey {
         let uid = user_id.unwrap_or(UserId(0));
         DialogueKey::from_user_in_chat(chat_id, uid)
     }
@@ -147,7 +143,11 @@ impl DialogueStrategy for UserInChatStrategy {
 pub struct GlobalUserStrategy;
 
 impl DialogueStrategy for GlobalUserStrategy {
-    fn extract_key(_chat_id: ChatId, user_id: Option<UserId>, _thread_id: Option<MessageThreadId>) -> DialogueKey {
+    fn extract_key(
+        _chat_id: ChatId,
+        user_id: Option<UserId>,
+        _thread_id: Option<ThreadId>,
+    ) -> DialogueKey {
         let uid = user_id.unwrap_or(UserId(0));
         DialogueKey::from_global_user(uid)
     }
@@ -159,9 +159,13 @@ impl DialogueStrategy for GlobalUserStrategy {
 pub struct UserInTopicStrategy;
 
 impl DialogueStrategy for UserInTopicStrategy {
-    fn extract_key(chat_id: ChatId, user_id: Option<UserId>, thread_id: Option<MessageThreadId>) -> DialogueKey {
+    fn extract_key(
+        chat_id: ChatId,
+        user_id: Option<UserId>,
+        thread_id: Option<ThreadId>,
+    ) -> DialogueKey {
         let uid = user_id.unwrap_or(UserId(0));
-        let tid = thread_id.unwrap_or(MessageThreadId(0));
+        let tid = thread_id.unwrap_or(ThreadId(MessageId(0)));
         DialogueKey::from_user_in_topic(chat_id, uid, tid)
     }
 }
@@ -172,8 +176,12 @@ impl DialogueStrategy for UserInTopicStrategy {
 pub struct ChatTopicStrategy;
 
 impl DialogueStrategy for ChatTopicStrategy {
-    fn extract_key(chat_id: ChatId, _user_id: Option<UserId>, thread_id: Option<MessageThreadId>) -> DialogueKey {
-        let tid = thread_id.unwrap_or(MessageThreadId(0));
+    fn extract_key(
+        chat_id: ChatId,
+        _user_id: Option<UserId>,
+        thread_id: Option<ThreadId>,
+    ) -> DialogueKey {
+        let tid = thread_id.unwrap_or(ThreadId(MessageId(0)));
         DialogueKey::from_chat_topic(chat_id, tid)
     }
 }
@@ -190,19 +198,13 @@ pub struct StrategyStorage<D, S: DialogueStrategy = ChatStrategy> {
 impl<D, S: DialogueStrategy> StrategyStorage<D, S> {
     /// Creates a new empty storage.
     pub fn new() -> Arc<Self> {
-        Arc::new(Self {
-            map: Mutex::new(HashMap::new()),
-            _strategy: PhantomData,
-        })
+        Arc::new(Self { map: Mutex::new(HashMap::new()), _strategy: PhantomData })
     }
 }
 
 impl<D, S: DialogueStrategy> Default for StrategyStorage<D, S> {
     fn default() -> Self {
-        Self {
-            map: Mutex::new(HashMap::new()),
-            _strategy: PhantomData,
-        }
+        Self { map: Mutex::new(HashMap::new()), _strategy: PhantomData }
     }
 }
 
@@ -222,11 +224,7 @@ where
     {
         Box::pin(async move {
             let key = S::extract_key(chat_id, None, None);
-            self.map
-                .lock()
-                .await
-                .remove(&key)
-                .ok_or(StrategyStorageError::DialogueNotFound)?;
+            self.map.lock().await.remove(&key).ok_or(StrategyStorageError::DialogueNotFound)?;
             Ok(())
         })
     }

@@ -16,8 +16,8 @@
 //! }
 //! ```
 
-use crate::requests::Requester;
-use crate::types::CallbackQueryId;
+use crate::{payloads::AnswerCallbackQuerySetters, requests::Requester, types::CallbackQueryId};
+use url::Url;
 
 /// A builder for answering callback queries.
 pub struct CallbackAnswer<'a, R: Requester> {
@@ -25,21 +25,14 @@ pub struct CallbackAnswer<'a, R: Requester> {
     callback_query_id: &'a CallbackQueryId,
     text: Option<String>,
     show_alert: Option<bool>,
-    url: Option<String>,
-    cache_time: Option<i32>,
+    url: Option<Url>,
+    cache_time: Option<u32>,
 }
 
 impl<'a, R: Requester> CallbackAnswer<'a, R> {
     /// Creates a new `CallbackAnswer` for the given callback query.
     pub fn new(bot: &'a R, callback_query_id: &'a CallbackQueryId) -> Self {
-        Self {
-            bot,
-            callback_query_id,
-            text: None,
-            show_alert: None,
-            url: None,
-            cache_time: None,
-        }
+        Self { bot, callback_query_id, text: None, show_alert: None, url: None, cache_time: None }
     }
 
     /// Sets the text to display in the notification.
@@ -55,20 +48,23 @@ impl<'a, R: Requester> CallbackAnswer<'a, R> {
     }
 
     /// Sets the URL to open when the button is pressed (for games).
-    pub fn url(mut self, url: impl Into<String>) -> Self {
-        self.url = Some(url.into());
+    pub fn url(mut self, url: Url) -> Self {
+        self.url = Some(url);
         self
     }
 
     /// Sets how long (in seconds) the result is cacheable.
-    pub fn cache_time(mut self, seconds: i32) -> Self {
+    pub fn cache_time(mut self, seconds: u32) -> Self {
         self.cache_time = Some(seconds);
         self
     }
 
     /// Sends the callback answer.
-    pub async fn send(self) -> Result<(), R::Err> {
-        let mut req = self.bot.answer_callback_query(self.callback_query_id);
+    pub async fn send(self) -> Result<(), R::Err>
+    where
+        R::AnswerCallbackQuery: AnswerCallbackQuerySetters,
+    {
+        let mut req = self.bot.answer_callback_query(self.callback_query_id.clone());
         if let Some(text) = self.text {
             req = req.text(text);
         }

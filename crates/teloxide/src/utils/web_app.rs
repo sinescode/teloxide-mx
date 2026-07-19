@@ -53,9 +53,7 @@ pub fn validate_with_secret(secret_key: &[u8], init_data: &str) -> bool {
         .collect::<Vec<_>>()
         .join("\n");
 
-    let mut mac = HmacSha256::new_from_slice(secret_key)
-        .map_err(|_| ())
-        .unwrap();
+    let mut mac = HmacSha256::new_from_slice(secret_key).map_err(|_| ()).unwrap();
     mac.update(data_check_string.as_bytes());
 
     let computed = hex::encode(mac.finalize().into_bytes());

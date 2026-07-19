@@ -921,5 +921,4 @@ mod tests {
     fn private_chat_de_wrong_type_field() {
         assert!(from_str::<ChatFullInfo>(r#"{"id":0,"type":"WRONG"}"#).is_err());
     }
-
 }

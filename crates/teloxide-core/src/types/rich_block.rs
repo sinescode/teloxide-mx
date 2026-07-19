@@ -12,81 +12,27 @@ use crate::types::{Animation, Audio, PhotoSize, RichText, Video, Voice};
 #[serde(tag = "type")]
 #[serde(rename_all = "snake_case")]
 pub enum RichBlock {
-    Paragraph {
-        rich_text: Option<RichText>,
-    },
-    SectionHeading {
-        rich_text: Option<RichText>,
-        level: Option<u8>,
-    },
-    Preformatted {
-        text: Option<String>,
-        language: Option<String>,
-    },
-    Footer {
-        rich_text: Option<RichText>,
-    },
+    Paragraph { rich_text: Option<RichText> },
+    SectionHeading { rich_text: Option<RichText>, level: Option<u8> },
+    Preformatted { text: Option<String>, language: Option<String> },
+    Footer { rich_text: Option<RichText> },
     Divider {},
-    MathematicalExpression {
-        expression: Option<String>,
-    },
-    Anchor {
-        name: String,
-    },
-    List {
-        items: Option<Vec<RichBlockListItem>>,
-        is_ordered: Option<bool>,
-    },
-    BlockQuotation {
-        blocks: Option<Vec<RichBlock>>,
-        cite: Option<RichText>,
-    },
-    PullQuotation {
-        rich_text: Option<RichText>,
-        cite: Option<RichText>,
-    },
-    Collage {
-        media: Option<Vec<RichBlockMedia>>,
-    },
-    Slideshow {
-        media: Option<Vec<RichBlockMedia>>,
-    },
-    Table {
-        cells: Option<Vec<Vec<RichBlockTableCell>>>,
-    },
-    Details {
-        summary: Option<RichText>,
-        blocks: Option<Vec<RichBlock>>,
-    },
-    Map {
-        latitude: f64,
-        longitude: f64,
-        horizontal_accuracy: Option<f64>,
-    },
-    Animation {
-        animation: Option<Animation>,
-        caption: Option<RichBlockCaption>,
-    },
-    Audio {
-        audio: Option<Audio>,
-        caption: Option<RichBlockCaption>,
-    },
-    Photo {
-        photo: Option<Vec<PhotoSize>>,
-        caption: Option<RichBlockCaption>,
-    },
-    Video {
-        video: Option<Video>,
-        caption: Option<RichBlockCaption>,
-    },
-    VoiceNote {
-        voice: Option<Voice>,
-        caption: Option<RichBlockCaption>,
-    },
-    Thinking {
-        rich_text: Option<RichText>,
-        duration: Option<u32>,
-    },
+    MathematicalExpression { expression: Option<String> },
+    Anchor { name: String },
+    List { items: Option<Vec<RichBlockListItem>>, is_ordered: Option<bool> },
+    BlockQuotation { blocks: Option<Vec<RichBlock>>, cite: Option<RichText> },
+    PullQuotation { rich_text: Option<RichText>, cite: Option<RichText> },
+    Collage { media: Option<Vec<RichBlockMedia>> },
+    Slideshow { media: Option<Vec<RichBlockMedia>> },
+    Table { cells: Option<Vec<Vec<RichBlockTableCell>>> },
+    Details { summary: Option<RichText>, blocks: Option<Vec<RichBlock>> },
+    Map { latitude: f64, longitude: f64, horizontal_accuracy: Option<f64> },
+    Animation { animation: Option<Animation>, caption: Option<RichBlockCaption> },
+    Audio { audio: Option<Audio>, caption: Option<RichBlockCaption> },
+    Photo { photo: Option<Vec<PhotoSize>>, caption: Option<RichBlockCaption> },
+    Video { video: Option<Video>, caption: Option<RichBlockCaption> },
+    VoiceNote { voice: Option<Voice>, caption: Option<RichBlockCaption> },
+    Thinking { rich_text: Option<RichText>, duration: Option<u32> },
 }
 
 /// An item in a rich block list.

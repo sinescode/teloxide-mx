@@ -11,7 +11,8 @@ use crate::types::{FileId, FileUniqueId, PhotoSize};
 #[derive(Serialize, Deserialize)]
 #[cfg_attr(test, derive(schemars::JsonSchema))]
 pub struct LivePhoto {
-    /// Identifier for the video file which can be used to download or reuse the file
+    /// Identifier for the video file which can be used to download or reuse the
+    /// file
     pub file_id: FileId,
     /// Unique identifier for the video file
     pub file_unique_id: FileUniqueId,

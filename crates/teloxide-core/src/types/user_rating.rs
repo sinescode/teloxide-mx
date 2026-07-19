@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 
-/// This object describes the rating of a user based on their Telegram Star spendings.
+/// This object describes the rating of a user based on their Telegram Star
+/// spendings.
 ///
 /// [The official docs](https://core.telegram.org/bots/api#userrating).
 #[serde_with::skip_serializing_none]
@@ -15,6 +16,7 @@ pub struct UserRating {
     pub rating: i32,
     /// The rating value required to get the current level
     pub current_level_rating: i32,
-    /// The rating value required to get to the next level; omitted if the maximum level was reached
+    /// The rating value required to get to the next level; omitted if the
+    /// maximum level was reached
     pub next_level_rating: Option<i32>,
 }

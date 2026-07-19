@@ -228,14 +228,16 @@ mod handler_ext;
 mod tracing;
 
 pub use crate::utils::shutdown_token::{IdleShutdownError, ShutdownToken};
+pub use dialogue::DialogueData;
 pub use dispatcher::{Dispatcher, DispatcherBuilder, UpdateHandler};
 pub use distribution::DefaultKey;
 pub use filter_ext::{MessageFilterExt, UpdateFilterExt};
 pub use handler_description::DpHandlerDescription;
 pub use handler_ext::{filter_command, filter_mention_command, HandlerExt};
-pub use middleware::{Middleware, MiddlewareContext, LoggingMiddleware, ThrottleMiddleware, ErrorCatchMiddleware};
+pub use middleware::{
+    ErrorCatchMiddleware, LoggingMiddleware, Middleware, MiddlewareContext, ThrottleMiddleware,
+};
 pub use router::{Router, RouterExt};
-pub use dialogue::DialogueData;
 
 #[cfg(feature = "tracing")]
 pub use self::tracing::UpdateHandlerTracingExt;

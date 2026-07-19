@@ -5,18 +5,20 @@
 
 #[cfg(test)]
 mod tests {
-    use crate::payloads::{
-        AnswerChatJoinRequestQuery, DeleteAllMessageReactions, DeleteEphemeralMessage,
-        DeleteMessageReaction, GetChatGifts, GetUserGifts, GetUserPersonalChatMessages,
-        RepostStory, SavePreparedKeyboardButton, SendChatJoinRequestWebApp, SendMessageDraft,
-        SetChatMemberTag, SetManagedBotAccessSettings,
-    };
-    use crate::requests::Payload;
-    use crate::types::{
-        BotAccessSettings, BotCommand, BotSubscriptionUpdated, BusinessConnectionId, ChatId,
-        Community, GuestQueryId, InputRichMessage, KeyboardButton, LivePhoto, MessageEntity,
-        MessageEntityKind, MessageId, Recipient, RichMessage, Seconds, StoryId, User, UserId,
-        UserRating,
+    use crate::{
+        payloads::{
+            AnswerChatJoinRequestQuery, DeleteAllMessageReactions, DeleteEphemeralMessage,
+            DeleteMessageReaction, GetChatGifts, GetUserGifts, GetUserPersonalChatMessages,
+            RepostStory, SavePreparedKeyboardButton, SendChatJoinRequestWebApp, SendMessageDraft,
+            SetChatMemberTag, SetManagedBotAccessSettings,
+        },
+        requests::Payload,
+        types::{
+            BotAccessSettings, BotCommand, BotSubscriptionUpdated, BusinessConnectionId, ChatId,
+            Community, GuestQueryId, InputRichMessage, KeyboardButton, LivePhoto, MessageEntity,
+            MessageEntityKind, MessageId, Recipient, RichMessage, Seconds, StoryId, User, UserId,
+            UserRating,
+        },
     };
 
     #[test]
@@ -122,12 +124,9 @@ mod tests {
         let button = KeyboardButton::new("Pick");
         let p = SavePreparedKeyboardButton::new(UserId(1), button);
         let json = serde_json::to_value(&p).unwrap();
-        for bad in [
-            "allow_user_chats",
-            "allow_bot_chats",
-            "allow_group_chats",
-            "allow_channel_chats",
-        ] {
+        for bad in
+            ["allow_user_chats", "allow_bot_chats", "allow_group_chats", "allow_channel_chats"]
+        {
             assert!(json.get(bad).is_none(), "invented field {bad}");
         }
         assert_eq!(json["user_id"], 1);
@@ -254,8 +253,10 @@ mod tests {
 
     #[test]
     fn forward_and_copy_message_effect_id() {
-        use crate::payloads::{CopyMessage, ForwardMessage};
-        use crate::types::{EffectId, MessageId};
+        use crate::{
+            payloads::{CopyMessage, ForwardMessage},
+            types::{EffectId, MessageId},
+        };
         let mut f = ForwardMessage::new(ChatId(1), ChatId(2), MessageId(3));
         f.message_effect_id = Some(EffectId("fx".into()));
         let j = serde_json::to_value(&f).unwrap();
@@ -269,8 +270,10 @@ mod tests {
 
     #[test]
     fn send_poll_new_tba_fields_and_edit_rich() {
-        use crate::payloads::{EditMessageText, SendPoll};
-        use crate::types::{MessageId, PollType};
+        use crate::{
+            payloads::{EditMessageText, SendPoll},
+            types::{MessageId, PollType},
+        };
         let mut p = SendPoll::new(ChatId(1), "Q?", vec!["a".into(), "b".into()]);
         p.allows_revoting = Some(true);
         p.shuffle_options = Some(true);
@@ -298,13 +301,11 @@ mod tests {
     #[test]
     fn poll_option_service_and_message_fields() {
         use crate::types::{PollOptionAdded, PollOptionDeleted};
-        let a: PollOptionAdded = serde_json::from_str(
-            r#"{"option_persistent_id":"p1","option_text":"A"}"#
-        ).unwrap();
+        let a: PollOptionAdded =
+            serde_json::from_str(r#"{"option_persistent_id":"p1","option_text":"A"}"#).unwrap();
         assert_eq!(a.option_persistent_id, "p1");
-        let d: PollOptionDeleted = serde_json::from_str(
-            r#"{"option_persistent_id":"p2","option_text":"B"}"#
-        ).unwrap();
+        let d: PollOptionDeleted =
+            serde_json::from_str(r#"{"option_persistent_id":"p2","option_text":"B"}"#).unwrap();
         assert_eq!(d.option_text, "B");
     }
 

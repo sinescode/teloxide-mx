@@ -38,7 +38,11 @@
 //!         Ok(())
 //!     }
 //!
-//!     async fn on_message(&self, ctx: SceneContext<'_, Self::State>, msg: Message) -> HandlerResult {
+//!     async fn on_message(
+//!         &self,
+//!         ctx: SceneContext<'_, Self::State>,
+//!         msg: Message,
+//!     ) -> HandlerResult {
 //!         match ctx.state() {
 //!             RegistrationState::WaitForName => {
 //!                 let name = msg.text().unwrap_or("").to_string();
@@ -59,14 +63,15 @@
 
 use std::{collections::HashMap, sync::Arc};
 
-use crate::types::{ChatId, Message, UserId};
-use crate::requests::Requester;
+use crate::{
+    requests::Requester,
+    types::{ChatId, Message, UserId},
+};
 
 /// Identifier for a scene.
 pub type SceneId = String;
 
 /// A trait for defining scenes (conversation flows).
-#[async_trait::async_trait]
 pub trait Scene: Send + Sync + 'static {
     /// The state type for this scene.
     type State: Clone + Default + Send + Sync + 'static;
@@ -75,27 +80,53 @@ pub trait Scene: Send + Sync + 'static {
     fn id(&self) -> &str;
 
     /// Called when the scene is entered.
-    async fn on_enter(&self, ctx: SceneContext<'_, Self::State>) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        let _ = ctx;
-        Ok(())
+    fn on_enter(
+        &self,
+        ctx: SceneContext<'_, Self::State>,
+    ) -> impl std::future::Future<Output = Result<(), Box<dyn std::error::Error + Send + Sync>>> + Send
+    {
+        async move {
+            let _ = ctx;
+            Ok(())
+        }
     }
 
     /// Called when a message is received while in this scene.
-    async fn on_message(&self, ctx: SceneContext<'_, Self::State>, msg: Message) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        let _ = (ctx, msg);
-        Ok(())
+    fn on_message(
+        &self,
+        ctx: SceneContext<'_, Self::State>,
+        msg: Message,
+    ) -> impl std::future::Future<Output = Result<(), Box<dyn std::error::Error + Send + Sync>>> + Send
+    {
+        async move {
+            let _ = (ctx, msg);
+            Ok(())
+        }
     }
 
     /// Called when a callback query is received while in this scene.
-    async fn on_callback_query(&self, ctx: SceneContext<'_, Self::State>, q: crate::types::CallbackQuery) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        let _ = (ctx, q);
-        Ok(())
+    fn on_callback_query(
+        &self,
+        ctx: SceneContext<'_, Self::State>,
+        q: crate::types::CallbackQuery,
+    ) -> impl std::future::Future<Output = Result<(), Box<dyn std::error::Error + Send + Sync>>> + Send
+    {
+        async move {
+            let _ = (ctx, q);
+            Ok(())
+        }
     }
 
     /// Called when the scene is exited.
-    async fn on_exit(&self, ctx: SceneContext<'_, Self::State>) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        let _ = ctx;
-        Ok(())
+    fn on_exit(
+        &self,
+        ctx: SceneContext<'_, Self::State>,
+    ) -> impl std::future::Future<Output = Result<(), Box<dyn std::error::Error + Send + Sync>>> + Send
+    {
+        async move {
+            let _ = ctx;
+            Ok(())
+        }
     }
 }
 
@@ -116,7 +147,9 @@ pub struct SceneRecord {
     pub state_snapshot: String, // serialized state
 }
 
-impl<'a, S: Clone> SceneContext<'a, S> {
+impl<'a, S: Clone + Default + serde::Serialize + for<'de> serde::Deserialize<'de>>
+    SceneContext<'a, S>
+{
     /// Returns the current state.
     pub fn state(&self) -> &S {
         &self.state
@@ -139,7 +172,10 @@ impl<'a, S: Clone> SceneContext<'a, S> {
     }
 
     /// Sets the scene state.
-    pub async fn set_state(&mut self, state: S) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn set_state(
+        &mut self,
+        state: S,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         self.state = state;
         Ok(())
     }
@@ -152,10 +188,8 @@ impl<'a, S: Clone> SceneContext<'a, S> {
     /// Pushes current state to history (for later rollback).
     pub fn snapshot(&mut self) {
         let snapshot = serde_json::to_string(&self.state).unwrap_or_default();
-        self.history.push(SceneRecord {
-            scene_id: self.scene_id.to_string(),
-            state_snapshot: snapshot,
-        });
+        self.history
+            .push(SceneRecord { scene_id: self.scene_id.to_string(), state_snapshot: snapshot });
     }
 
     /// Rolls back to the previous state in history.
@@ -185,10 +219,7 @@ pub struct SceneManager {
 impl SceneManager {
     /// Creates a new empty scene manager.
     pub fn new() -> Self {
-        Self {
-            scenes: HashMap::new(),
-            history: Vec::new(),
-        }
+        Self { scenes: HashMap::new(), history: Vec::new() }
     }
 
     /// Registers a scene.

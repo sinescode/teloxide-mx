@@ -50,9 +50,7 @@ impl TelegramIpFilter {
         match addr {
             IpAddr::V4(v4) => {
                 let ip_u32 = u32::from_be_bytes(v4.octets());
-                self.allowed_networks
-                    .iter()
-                    .any(|&(base, mask)| (ip_u32 & mask) == (base & mask))
+                self.allowed_networks.iter().any(|&(base, mask)| (ip_u32 & mask) == (base & mask))
             }
             IpAddr::V6(_) => false, // Telegram uses IPv4 for webhooks
         }

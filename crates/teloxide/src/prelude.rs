@@ -1,28 +1,34 @@
 //! Commonly used items.
 
-pub use crate::error_handlers::{LoggingErrorHandler, OnError};
-pub use crate::error_types::TelegramError;
+pub use crate::{
+    error_handlers::{LoggingErrorHandler, OnError},
+    error_types::TelegramError,
+};
 
 pub use crate::respond;
 
 pub use crate::dispatching::{
-    dialogue::{Dialogue, DialogueData}, Dispatcher, HandlerExt as _, MessageFilterExt as _,
-    UpdateFilterExt as _, Router,
+    dialogue::{Dialogue, DialogueData},
+    Dispatcher, HandlerExt as _, MessageFilterExt as _, Router, UpdateFilterExt as _,
 };
 
 pub use crate::dispatching::middleware::{Middleware, MiddlewareContext};
 
-pub use crate::sugar::message::MessageExt;
-pub use crate::utils::callback_answer::CallbackAnswer;
-pub use crate::utils::callback_data::{CallbackData, CallbackDataExt};
-pub use crate::utils::chat_action::ChatActionSender;
-pub use crate::utils::deep_linking;
-pub use crate::utils::filters::FilterBuilder;
-pub use crate::utils::i18n::{I18nContext, I18nLoader, Translation};
-pub use crate::utils::keyboard::{InlineKeyboardBuilder, ReplyKeyboardBuilder};
-pub use crate::utils::magic_filter::{F, ComposedFilter, FilterExt};
-pub use crate::utils::media_group::MediaGroupBuilder;
-pub use crate::testing::{MockBot, UpdateBuilder};
+pub use crate::{
+    sugar::message::MessageExt,
+    testing::{MockBot, UpdateBuilder},
+    utils::{
+        callback_answer::CallbackAnswer,
+        callback_data::{CallbackData, CallbackDataExt},
+        chat_action::ChatActionSender,
+        deep_linking,
+        filters::FilterBuilder,
+        i18n::{I18nContext, I18nLoader, Translation},
+        keyboard::{InlineKeyboardBuilder, ReplyKeyboardBuilder},
+        magic_filter::{ComposedFilter, FilterExt, F},
+        media_group::MediaGroupBuilder,
+    },
+};
 
 #[cfg(feature = "macros")]
 pub use crate::macros::CallbackData;

@@ -57,9 +57,11 @@ pub struct Gift {
     /// Information about the chat that published the gift
     pub publisher_chat: Option<Chat>,
 
-    /// The total number of gifts of this type that can be sent by the user; for limited gifts only. TBA 9.3+
+    /// The total number of gifts of this type that can be sent by the user; for
+    /// limited gifts only. TBA 9.3+
     pub personal_total_count: Option<u32>,
-    /// The number of remaining gifts of this type that can be sent by the user; for limited gifts only. TBA 9.3+
+    /// The number of remaining gifts of this type that can be sent by the user;
+    /// for limited gifts only. TBA 9.3+
     pub personal_remaining_count: Option<u32>,
     /// True, if the gift is for Telegram Premium subscribers only. TBA 9.3+
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]

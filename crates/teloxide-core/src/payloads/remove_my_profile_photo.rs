@@ -2,7 +2,7 @@
 
 use serde::Serialize;
 
-use crate::types::{True};
+use crate::types::True;
 
 impl_payload! {
     /// Removes the profile photo of the bot. Returns True on success.

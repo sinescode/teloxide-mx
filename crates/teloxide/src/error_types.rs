@@ -34,12 +34,7 @@ impl std::error::Error for TelegramError {}
 
 impl TelegramError {
     pub fn new(error_code: i64, description: String) -> Self {
-        Self {
-            error_code,
-            description,
-            parameters: None,
-            doc_url: None,
-        }
+        Self { error_code, description, parameters: None, doc_url: None }
     }
 
     pub fn with_parameters(mut self, params: ResponseParameters) -> Self {
@@ -55,7 +50,7 @@ impl TelegramError {
     /// Returns the number of seconds to wait before retrying, if applicable.
     pub fn retry_after(&self) -> Option<u32> {
         self.parameters.as_ref().and_then(|p| match p {
-            ResponseParameters::RetryAfter(secs) => Some(*secs),
+            ResponseParameters::RetryAfter(secs) => Some(secs.seconds()),
             _ => None,
         })
     }

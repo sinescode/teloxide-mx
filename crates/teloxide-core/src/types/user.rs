@@ -37,11 +37,13 @@ pub struct User {
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub added_to_attachment_menu: bool,
 
-    /// `true`, if the user has forum topic mode enabled in private chats with the bot. TBA 9.3+
+    /// `true`, if the user has forum topic mode enabled in private chats with
+    /// the bot. TBA 9.3+
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub has_topics_enabled: bool,
 
-    /// `true`, if the user allows others to create topics in chats with them. TBA 9.4+
+    /// `true`, if the user allows others to create topics in chats with them.
+    /// TBA 9.4+
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub allows_users_to_create_topics: bool,
 }

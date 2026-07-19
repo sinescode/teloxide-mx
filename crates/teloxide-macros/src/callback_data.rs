@@ -98,9 +98,7 @@ fn parse_variant_attrs(attrs: &[syn::Attribute]) -> Result<CallbackDataVariantAt
         }
     }
 
-    Ok(CallbackDataVariantAttrs {
-        suffix: suffix.unwrap_or_default(),
-    })
+    Ok(CallbackDataVariantAttrs { suffix: suffix.unwrap_or_default() })
 }
 
 pub(crate) fn callback_data_impl(input: DeriveInput) -> Result<TokenStream> {
@@ -158,11 +156,7 @@ pub(crate) fn callback_data_impl(input: DeriveInput) -> Result<TokenStream> {
             }
         };
 
-        variants.push(CallbackDataVariant {
-            ident: variant.ident.clone(),
-            suffix,
-            fields,
-        });
+        variants.push(CallbackDataVariant { ident: variant.ident.clone(), suffix, fields });
     }
 
     // Generate the prefix function

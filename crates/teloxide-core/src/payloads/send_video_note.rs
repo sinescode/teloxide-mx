@@ -2,9 +2,9 @@
 
 use serde::Serialize;
 
-use crate::types::{UserId, CallbackQueryId, 
-    BusinessConnectionId, EffectId, InputFile, Message, Recipient, ReplyMarkup, ReplyParameters,
-    SuggestedPostParameters, ThreadId, TopicId,
+use crate::types::{
+    BusinessConnectionId, CallbackQueryId, EffectId, InputFile, Message, Recipient, ReplyMarkup,
+    ReplyParameters, SuggestedPostParameters, ThreadId, TopicId, UserId,
 };
 
 impl_payload! {

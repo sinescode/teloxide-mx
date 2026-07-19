@@ -1,10 +1,12 @@
-//! Message convenience methods — aiogram-style `message.answer()` / `message.reply()`.
+//! Message convenience methods — aiogram-style `message.answer()` /
+//! `message.reply()`.
 //!
 //! These extension traits add ergonomic shortcuts directly on [`Message`], so
 //! you can write `msg.answer("Hello!")` instead of
 //! `bot.send_message(msg.chat.id, "Hello!")`.
 
 use crate::types::{ChatId, Message, MessageId, ReplyParameters};
+use teloxide_core::payloads::SendMessageSetters;
 
 /// Extension trait providing [`Message::answer`] and [`Message::reply`] sugar.
 ///
@@ -71,16 +73,27 @@ impl MessageExt for Message {
 mod tests {
     use super::*;
 
+    fn make_message(chat_id: i64, message_id: i32) -> Message {
+        let json = serde_json::json!({
+            "message_id": message_id,
+            "from": {
+                "id": 1,
+                "is_bot": false,
+                "first_name": "Test",
+            },
+            "chat": {
+                "id": chat_id,
+                "type": "private",
+                "first_name": "Test",
+            },
+            "date": 1_569_518_829_i64,
+        });
+        serde_json::from_value(json).expect("failed to deserialize test Message")
+    }
+
     #[test]
     fn message_chat_id() {
-        let msg = Message {
-            id: MessageId(42),
-            chat: Chat {
-                id: ChatId(123),
-                ..Default::default()
-            },
-            ..Default::default()
-        };
+        let msg = make_message(123, 42);
         assert_eq!(msg.chat_id(), ChatId(123));
         assert_eq!(msg.message_id(), MessageId(42));
     }

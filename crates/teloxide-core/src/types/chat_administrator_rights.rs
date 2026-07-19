@@ -64,12 +64,12 @@ pub struct ChatAdministratorRights {
     /// `true`, if the administrator can manage direct messages of the channel
     /// and decline suggested posts; for channels only
     pub can_manage_direct_messages: bool,
-    /// True, if the administrator can manage tags of other chat members. TBA 9.5+
+    /// True, if the administrator can manage tags of other chat members. TBA
+    /// 9.5+
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub can_manage_tags: bool,
 
     /// True, if the administrator can manage bots in the chat. TBA 10.0+
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub can_manage_bots: bool,
-
 }

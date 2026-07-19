@@ -2,7 +2,7 @@
 
 use serde::Serialize;
 
-use crate::types::{UserId};
+use crate::types::UserId;
 
 impl_payload! {
     /// Returns the token of a managed bot. Returns the token as a String on success.

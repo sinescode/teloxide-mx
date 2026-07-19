@@ -32,10 +32,7 @@ impl Display for CallbackDataError {
                 write!(f, "Failed to deserialize callback data: {e}")
             }
             Self::SeparatorInPrefix { separator, prefix } => {
-                write!(
-                    f,
-                    "Separator '{separator}' cannot be used inside prefix '{prefix}'"
-                )
+                write!(f, "Separator '{separator}' cannot be used inside prefix '{prefix}'")
             }
         }
     }
@@ -52,8 +49,7 @@ impl Error for CallbackDataError {}
 /// # Example
 ///
 /// ```rust
-/// use teloxide::prelude::*;
-/// use teloxide::utils::callback_data::CallbackData;
+/// use teloxide::{prelude::*, utils::callback_data::CallbackData};
 ///
 /// #[derive(Clone, CallbackData, Debug)]
 /// #[callback_data(prefix = "btn")]
@@ -131,8 +127,10 @@ impl CallbackDataExt for CallbackQuery {
 /// # Example
 ///
 /// ```rust
-/// use teloxide::prelude::*;
-/// use teloxide::utils::callback_data::{CallbackData, filter_callback_data};
+/// use teloxide::{
+///     prelude::*,
+///     utils::callback_data::{filter_callback_data, CallbackData},
+/// };
 ///
 /// #[derive(Clone, CallbackData, Debug)]
 /// #[callback_data(prefix = "btn")]
@@ -205,11 +203,9 @@ mod tests {
             let rest = &rest[1..];
             let parts: Vec<&str> = rest.split(':').collect();
             match parts.len() {
-                1 => Ok(Self {
-                    prefix: prefix.to_string(),
-                    action: parts[0].to_string(),
-                    id: None,
-                }),
+                1 => {
+                    Ok(Self { prefix: prefix.to_string(), action: parts[0].to_string(), id: None })
+                }
                 2 => {
                     let id = parts[1]
                         .parse::<u32>()
@@ -220,9 +216,7 @@ mod tests {
                         id: Some(id),
                     })
                 }
-                _ => Err(CallbackDataError::DeserializationError(
-                    "Too many parts".to_string(),
-                )),
+                _ => Err(CallbackDataError::DeserializationError("Too many parts".to_string())),
             }
         }
     }

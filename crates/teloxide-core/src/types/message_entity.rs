@@ -264,10 +264,18 @@ pub enum MessageEntityKind {
     Strikethrough,
     Spoiler,
     Code,
-    Pre { language: Option<String> },
-    TextLink { url: reqwest::Url },
-    TextMention { user: User },
-    CustomEmoji { custom_emoji_id: CustomEmojiId },
+    Pre {
+        language: Option<String>,
+    },
+    TextLink {
+        url: reqwest::Url,
+    },
+    TextMention {
+        user: User,
+    },
+    CustomEmoji {
+        custom_emoji_id: CustomEmojiId,
+    },
     /// Formatted date and time. TBA 9.5+
     DateTime {
         /// Unix timestamp of the date

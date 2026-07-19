@@ -67,7 +67,8 @@ pub struct Poll {
     /// forwarded) by the bot or to the private chat with the bot.
     pub correct_option_id: Option<u8>,
 
-    /// Identifiers of the correct answer options (quiz multi-correct). TBA 10.0+
+    /// Identifiers of the correct answer options (quiz multi-correct). TBA
+    /// 10.0+
     pub correct_option_ids: Option<Vec<u8>>,
 
     /// Description of the poll. TBA 10.0+
@@ -100,7 +101,6 @@ pub struct Poll {
     pub members_only: bool,
     /// List of country codes for geographic filtering. TBA 10.0+
     pub country_codes: Option<Vec<String>>,
-
 }
 
 /// This object contains information about one answer option in a poll.

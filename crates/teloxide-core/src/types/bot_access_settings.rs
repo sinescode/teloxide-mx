@@ -11,8 +11,10 @@ use crate::types::User;
 #[derive(Serialize, Deserialize)]
 #[cfg_attr(test, derive(schemars::JsonSchema))]
 pub struct BotAccessSettings {
-    /// `true`, if only selected users can access the bot. The bot's owner can always access it
+    /// `true`, if only selected users can access the bot. The bot's owner can
+    /// always access it
     pub is_access_restricted: bool,
-    /// The list of other users who have access to the bot if the access is restricted
+    /// The list of other users who have access to the bot if the access is
+    /// restricted
     pub added_users: Option<Vec<User>>,
 }

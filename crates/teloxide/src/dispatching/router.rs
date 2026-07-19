@@ -13,16 +13,12 @@
 //! # async fn main() {
 //! let mut admin_router = Router::new("admin");
 //! admin_router.add_handler(
-//!     Update::filter_message()
-//!         .filter_command::<AdminCommand>()
-//!         .endpoint(handle_admin_command)
+//!     Update::filter_message().filter_command::<AdminCommand>().endpoint(handle_admin_command),
 //! );
 //!
 //! let mut user_router = Router::new("user");
 //! user_router.add_handler(
-//!     Update::filter_message()
-//!         .filter_command::<UserCommand>()
-//!         .endpoint(handle_user_command)
+//!     Update::filter_message().filter_command::<UserCommand>().endpoint(handle_user_command),
 //! );
 //!
 //! // Compose routers into a handler tree
@@ -30,7 +26,10 @@
 //! # }
 //! ```
 
-use crate::dispatching::{UpdateHandler, UpdateFilterExt};
+use crate::{
+    dispatching::{UpdateFilterExt, UpdateHandler},
+    types::Update,
+};
 use std::fmt;
 
 type HandlerResult = Result<(), Box<dyn std::error::Error + Send + Sync>>;
@@ -49,11 +48,7 @@ pub struct Router {
 impl Router {
     /// Creates a new router with the given name.
     pub fn new(name: impl Into<String>) -> Self {
-        Self {
-            name: name.into(),
-            handlers: Vec::new(),
-            sub_routers: Vec::new(),
-        }
+        Self { name: name.into(), handlers: Vec::new(), sub_routers: Vec::new() }
     }
 
     /// Returns the router's name.
@@ -68,86 +63,72 @@ impl Router {
 
     /// Adds a message handler branch.
     pub fn add_message_handler(&mut self, handler: BoxedHandler) {
-        self.handlers
-            .push(UpdateFilterExt::filter_message().branch(handler));
+        self.handlers.push(Update::filter_message().branch(handler));
     }
 
     /// Adds a callback query handler branch.
     pub fn add_callback_handler(&mut self, handler: BoxedHandler) {
-        self.handlers
-            .push(UpdateFilterExt::filter_callback_query().branch(handler));
+        self.handlers.push(Update::filter_callback_query().branch(handler));
     }
 
     /// Adds an inline query handler branch.
     pub fn add_inline_handler(&mut self, handler: BoxedHandler) {
-        self.handlers
-            .push(UpdateFilterExt::filter_inline_query().branch(handler));
+        self.handlers.push(Update::filter_inline_query().branch(handler));
     }
 
     /// Adds a chosen inline result handler branch.
     pub fn add_chosen_inline_handler(&mut self, handler: BoxedHandler) {
-        self.handlers
-            .push(UpdateFilterExt::filter_chosen_inline_result().branch(handler));
+        self.handlers.push(Update::filter_chosen_inline_result().branch(handler));
     }
 
     /// Adds a shipping query handler branch.
     pub fn add_shipping_handler(&mut self, handler: BoxedHandler) {
-        self.handlers
-            .push(UpdateFilterExt::filter_shipping_query().branch(handler));
+        self.handlers.push(Update::filter_shipping_query().branch(handler));
     }
 
     /// Adds a pre-checkout query handler branch.
     pub fn add_pre_checkout_handler(&mut self, handler: BoxedHandler) {
-        self.handlers
-            .push(UpdateFilterExt::filter_pre_checkout_query().branch(handler));
+        self.handlers.push(Update::filter_pre_checkout_query().branch(handler));
     }
 
     /// Adds a channel post handler branch.
     pub fn add_channel_post_handler(&mut self, handler: BoxedHandler) {
-        self.handlers
-            .push(UpdateFilterExt::filter_channel_post().branch(handler));
+        self.handlers.push(Update::filter_channel_post().branch(handler));
     }
 
     /// Adds an edited message handler branch.
     pub fn add_edited_message_handler(&mut self, handler: BoxedHandler) {
-        self.handlers
-            .push(UpdateFilterExt::filter_edited_message().branch(handler));
+        self.handlers.push(Update::filter_edited_message().branch(handler));
     }
 
     /// Adds a message reaction handler branch.
     pub fn add_message_reaction_handler(&mut self, handler: BoxedHandler) {
-        self.handlers
-            .push(UpdateFilterExt::filter_message_reaction_updated().branch(handler));
+        self.handlers.push(Update::filter_message_reaction_updated().branch(handler));
     }
 
     /// Adds a poll handler branch.
     pub fn add_poll_handler(&mut self, handler: BoxedHandler) {
-        self.handlers
-            .push(UpdateFilterExt::filter_poll().branch(handler));
+        self.handlers.push(Update::filter_poll().branch(handler));
     }
 
     /// Adds a poll answer handler branch.
     pub fn add_poll_answer_handler(&mut self, handler: BoxedHandler) {
-        self.handlers
-            .push(UpdateFilterExt::filter_poll_answer().branch(handler));
+        self.handlers.push(Update::filter_poll_answer().branch(handler));
     }
 
     /// Adds a chat member handler branch.
     pub fn add_chat_member_handler(&mut self, handler: BoxedHandler) {
-        self.handlers
-            .push(UpdateFilterExt::filter_chat_member().branch(handler));
+        self.handlers.push(Update::filter_chat_member().branch(handler));
     }
 
     /// Adds a my chat member handler branch.
     pub fn add_my_chat_member_handler(&mut self, handler: BoxedHandler) {
-        self.handlers
-            .push(UpdateFilterExt::filter_my_chat_member().branch(handler));
+        self.handlers.push(Update::filter_my_chat_member().branch(handler));
     }
 
     /// Adds a chat join request handler branch.
     pub fn add_chat_join_request_handler(&mut self, handler: BoxedHandler) {
-        self.handlers
-            .push(UpdateFilterExt::filter_chat_join_request().branch(handler));
+        self.handlers.push(Update::filter_chat_join_request().branch(handler));
     }
 
     /// Includes a sub-router.
@@ -228,8 +209,10 @@ mod tests {
 
     #[test]
     fn router_compose() {
-        let r1 = Router::new("r1");
-        let r2 = Router::new("r2");
+        let mut r1 = Router::new("r1");
+        r1.add_handler(Update::filter_message().endpoint(|| async { Ok(()) }));
+        let mut r2 = Router::new("r2");
+        r2.add_handler(Update::filter_message().endpoint(|| async { Ok(()) }));
         let _handler = Router::compose(vec![r1, r2]);
     }
 }

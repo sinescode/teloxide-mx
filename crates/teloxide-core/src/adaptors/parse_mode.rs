@@ -559,4 +559,3 @@ fn visit_parse_modes_in_input_media(
 
     visitor(parse_mode);
 }
-

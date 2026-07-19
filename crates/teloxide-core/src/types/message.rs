@@ -186,7 +186,8 @@ pub struct MessageCommon {
     pub guest_bot_caller_user: Option<User>,
     /// Chat of the guest bot caller, if any. TBA 10.0+
     pub guest_bot_caller_chat: Option<Chat>,
-    /// Unique identifier of a guest query, if this message is a guest message. TBA 10.0+
+    /// Unique identifier of a guest query, if this message is a guest message.
+    /// TBA 10.0+
     pub guest_query_id: Option<crate::types::GuestQueryId>,
     /// Identifier of the poll option that is being replied to. TBA 10.0+
     pub reply_to_poll_option_id: Option<String>,
@@ -1039,14 +1040,15 @@ mod getters {
     use crate::types::{
         self, message::MessageKind::*, Chat, ChatId, ChatMigration, EffectId, LinkPreviewOptions,
         MaybeInaccessibleMessage, MediaAnimation, MediaAudio, MediaChecklist, MediaContact,
-        MediaDocument, MediaGame, MediaKind, MediaLivePhoto, MediaLocation, MediaPaid, MediaPhoto, MediaPoll,
-        MediaSticker, MediaStory, MediaText, MediaVenue, MediaVideo, MediaVideoNote, MediaVoice,
-        Message, MessageChannelChatCreated, MessageChatShared, MessageChecklistTasksAdded,
-        MessageChecklistTasksDone, MessageCommon, MessageConnectedWebsite, MessageDeleteChatPhoto,
-        MessageDice, MessageDirectMessagePriceChanged, MessageEntity, MessageGroupChatCreated,
-        MessageId, MessageInvoice, MessageLeftChatMember, MessageNewChatMembers,
-        MessageNewChatPhoto, MessageNewChatTitle, MessageOrigin, MessagePassportData,
-        MessagePinned, MessageProximityAlertTriggered, MessageSuccessfulPayment,
+        MediaDocument, MediaGame, MediaKind, MediaLivePhoto, MediaLocation, MediaPaid, MediaPhoto,
+        MediaPoll, MediaSticker, MediaStory, MediaText, MediaVenue, MediaVideo, MediaVideoNote,
+        MediaVoice, Message, MessageChannelChatCreated, MessageChatShared,
+        MessageChecklistTasksAdded, MessageChecklistTasksDone, MessageCommon,
+        MessageConnectedWebsite, MessageDeleteChatPhoto, MessageDice,
+        MessageDirectMessagePriceChanged, MessageEntity, MessageGroupChatCreated, MessageId,
+        MessageInvoice, MessageLeftChatMember, MessageNewChatMembers, MessageNewChatPhoto,
+        MessageNewChatTitle, MessageOrigin, MessagePassportData, MessagePinned,
+        MessageProximityAlertTriggered, MessageSuccessfulPayment,
         MessageSuggestedPostApprovalFailed, MessageSuggestedPostApproved,
         MessageSuggestedPostDeclined, MessageSuggestedPostPaid, MessageSuggestedPostRefunded,
         MessageSupergroupChatCreated, MessageUsersShared, MessageVideoChatParticipantsInvited,
@@ -1085,7 +1087,10 @@ mod getters {
                     guest_bot_caller_user: None,
                     guest_bot_caller_chat: None,
                     guest_query_id: None,
-                    reply_to_poll_option_id: None, author_signature, .. }) => author_signature.as_deref(),
+                    reply_to_poll_option_id: None,
+                    author_signature,
+                    ..
+                }) => author_signature.as_deref(),
                 _ => None,
             }
         }
@@ -1100,7 +1105,10 @@ mod getters {
                     guest_bot_caller_user: None,
                     guest_bot_caller_chat: None,
                     guest_query_id: None,
-                    reply_to_poll_option_id: None, effect_id, .. }) => effect_id.as_ref(),
+                    reply_to_poll_option_id: None,
+                    effect_id,
+                    ..
+                }) => effect_id.as_ref(),
                 _ => None,
             }
         }
@@ -1121,7 +1129,10 @@ mod getters {
                     guest_bot_caller_user: None,
                     guest_bot_caller_chat: None,
                     guest_query_id: None,
-                    reply_to_poll_option_id: None, forward_origin, .. }) => forward_origin.as_ref(),
+                    reply_to_poll_option_id: None,
+                    forward_origin,
+                    ..
+                }) => forward_origin.as_ref(),
                 _ => None,
             }
         }
@@ -1136,7 +1147,10 @@ mod getters {
                     guest_bot_caller_user: None,
                     guest_bot_caller_chat: None,
                     guest_query_id: None,
-                    reply_to_poll_option_id: None, quote, .. }) => quote.as_ref(),
+                    reply_to_poll_option_id: None,
+                    quote,
+                    ..
+                }) => quote.as_ref(),
                 _ => None,
             }
         }
@@ -1151,7 +1165,10 @@ mod getters {
                     guest_bot_caller_user: None,
                     guest_bot_caller_chat: None,
                     guest_query_id: None,
-                    reply_to_poll_option_id: None, reply_to_story, .. }) => reply_to_story.as_ref(),
+                    reply_to_poll_option_id: None,
+                    reply_to_story,
+                    ..
+                }) => reply_to_story.as_ref(),
                 _ => None,
             }
         }
@@ -1166,7 +1183,10 @@ mod getters {
                     guest_bot_caller_user: None,
                     guest_bot_caller_chat: None,
                     guest_query_id: None,
-                    reply_to_poll_option_id: None, sender_boost_count, .. }) => *sender_boost_count,
+                    reply_to_poll_option_id: None,
+                    sender_boost_count,
+                    ..
+                }) => *sender_boost_count,
                 _ => None,
             }
         }
@@ -1238,7 +1258,10 @@ mod getters {
                     guest_bot_caller_user: None,
                     guest_bot_caller_chat: None,
                     guest_query_id: None,
-                    reply_to_poll_option_id: None, edit_date, .. }) => edit_date.as_ref(),
+                    reply_to_poll_option_id: None,
+                    edit_date,
+                    ..
+                }) => edit_date.as_ref(),
                 _ => None,
             }
         }
@@ -1504,7 +1527,9 @@ mod getters {
                     MediaKind::Animation(MediaAnimation { has_media_spoiler, .. })
                     | MediaKind::Photo(MediaPhoto { has_media_spoiler, .. })
                     | MediaKind::Video(MediaVideo { has_media_spoiler, .. })
-                    | MediaKind::LivePhoto(MediaLivePhoto { has_media_spoiler, .. }) => has_media_spoiler,
+                    | MediaKind::LivePhoto(MediaLivePhoto { has_media_spoiler, .. }) => {
+                        has_media_spoiler
+                    }
                     MediaKind::Audio(_)
                     | MediaKind::Contact(_)
                     | MediaKind::Document(_)
@@ -1968,7 +1993,8 @@ mod getters {
                     guest_bot_caller_chat: None,
                     guest_query_id: None,
                     reply_to_poll_option_id: None,
-                    media_kind: MediaKind::Migration(chat_migration), ..
+                    media_kind: MediaKind::Migration(chat_migration),
+                    ..
                 }) => Some(chat_migration),
                 _ => None,
             }
@@ -2386,7 +2412,10 @@ mod getters {
                     guest_bot_caller_user: None,
                     guest_bot_caller_chat: None,
                     guest_query_id: None,
-                    reply_to_poll_option_id: None, reply_markup, .. }) => reply_markup.as_ref(),
+                    reply_to_poll_option_id: None,
+                    reply_markup,
+                    ..
+                }) => reply_markup.as_ref(),
                 _ => None,
             }
         }
@@ -2401,7 +2430,10 @@ mod getters {
                     guest_bot_caller_user: None,
                     guest_bot_caller_chat: None,
                     guest_query_id: None,
-                    reply_to_poll_option_id: None, is_automatic_forward, .. }) => *is_automatic_forward,
+                    reply_to_poll_option_id: None,
+                    is_automatic_forward,
+                    ..
+                }) => *is_automatic_forward,
                 _ => false,
             }
         }
@@ -2416,7 +2448,10 @@ mod getters {
                     guest_bot_caller_user: None,
                     guest_bot_caller_chat: None,
                     guest_query_id: None,
-                    reply_to_poll_option_id: None, has_protected_content, .. }) => *has_protected_content,
+                    reply_to_poll_option_id: None,
+                    has_protected_content,
+                    ..
+                }) => *has_protected_content,
                 _ => false,
             }
         }
@@ -3894,7 +3929,6 @@ mod tests {
     }
 }
 
-
 /// Service message: chat owner left.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(test, derive(schemars::JsonSchema))]
@@ -3902,7 +3936,6 @@ pub struct MessageChatOwnerLeft {
     /// Service message: chat owner left.
     pub chat_owner_left: crate::types::ChatOwnerLeft,
 }
-
 
 /// Service message: chat owner changed.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -3912,7 +3945,6 @@ pub struct MessageChatOwnerChanged {
     pub chat_owner_changed: crate::types::ChatOwnerChanged,
 }
 
-
 /// Service message: gift upgrade sent.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(test, derive(schemars::JsonSchema))]
@@ -3920,7 +3952,6 @@ pub struct MessageGiftUpgradeSent {
     /// Service message: gift upgrade sent.
     pub gift_upgrade_sent: crate::types::UniqueGiftInfo,
 }
-
 
 /// Service message: chat added to community.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -3930,7 +3961,6 @@ pub struct MessageCommunityChatAdded {
     pub community_chat_added: crate::types::CommunityChatAdded,
 }
 
-
 /// Service message: chat removed from community.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(test, derive(schemars::JsonSchema))]
@@ -3938,7 +3968,6 @@ pub struct MessageCommunityChatRemoved {
     /// Service message: chat removed from community.
     pub community_chat_removed: crate::types::CommunityChatRemoved,
 }
-
 
 /// Service message: managed bot created.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -3948,7 +3977,6 @@ pub struct MessageManagedBotCreated {
     pub managed_bot_created: crate::types::ManagedBotCreated,
 }
 
-
 /// Service message: managed bot updated.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(test, derive(schemars::JsonSchema))]
@@ -3956,7 +3984,6 @@ pub struct MessageManagedBotUpdated {
     /// Service message: managed bot updated.
     pub managed_bot_updated: crate::types::ManagedBotUpdated,
 }
-
 
 /// Service message: a poll option was added.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]

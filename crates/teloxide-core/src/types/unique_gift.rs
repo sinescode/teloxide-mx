@@ -8,7 +8,8 @@ use serde::{Deserialize, Serialize};
 #[derive(Serialize, Deserialize)]
 #[cfg_attr(test, derive(schemars::JsonSchema))]
 pub struct UniqueGift {
-    /// Unique identifier of the regular gift from which this unique gift was upgraded. TBA 9.3+
+    /// Unique identifier of the regular gift from which this unique gift was
+    /// upgraded. TBA 9.3+
     pub gift_id: Option<crate::types::GiftId>,
     /// Human-readable name of the regular gift from which this unique gift was
     /// upgraded

@@ -2,7 +2,9 @@
 
 use serde::Serialize;
 
-use crate::types::{InlineKeyboardMarkup, LinkPreviewOptions, MessageEntity, ParseMode, Recipient, True, UserId};
+use crate::types::{
+    InlineKeyboardMarkup, LinkPreviewOptions, MessageEntity, ParseMode, Recipient, True, UserId,
+};
 
 impl_payload! {
     /// Use this method to edit text of an ephemeral message. Returns True on success.

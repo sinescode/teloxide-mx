@@ -17,9 +17,11 @@ pub struct UniqueGiftInfo {
 
     /// For gifts bought from other users, the price paid for the gift
     pub last_resale_star_count: Option<u32>,
-    /// Currency of the last resale price. TBA 9.3+ (replaces exclusive use of last_resale_star_count)
+    /// Currency of the last resale price. TBA 9.3+ (replaces exclusive use of
+    /// last_resale_star_count)
     pub last_resale_currency: Option<String>,
-    /// Amount of the last resale price in the smallest units of the currency. TBA 9.3+
+    /// Amount of the last resale price in the smallest units of the currency.
+    /// TBA 9.3+
     pub last_resale_amount: Option<u64>,
     /// True, if the gift was upgraded separately. TBA 9.3+
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]

@@ -24,8 +24,10 @@ use std::time::Duration;
 
 use tokio::time::sleep;
 
-use crate::requests::Requester;
-use crate::types::{ChatAction, ChatId};
+use crate::{
+    requests::Requester,
+    types::{ChatAction, ChatId},
+};
 
 /// Default interval between chat action messages (5 seconds).
 pub const DEFAULT_INTERVAL: Duration = Duration::from_secs(5);

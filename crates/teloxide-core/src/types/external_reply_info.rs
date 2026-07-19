@@ -32,7 +32,6 @@ pub struct ExternalReplyInfo {
     pub kind: ExternalReplyInfoKind,
     /// Live photo referenced in an external reply. TBA 10.0+
     pub live_photo: Option<crate::types::LivePhoto>,
-
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]

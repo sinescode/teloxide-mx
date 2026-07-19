@@ -108,8 +108,8 @@ pub use storage::*;
 pub mod scene;
 pub mod strategy;
 pub use strategy::{
-    ChatStrategy, DialogueKey, DialogueStrategy, GlobalUserStrategy, StrategyStorage,
-    UserInChatStrategy, UserInTopicStrategy, ChatTopicStrategy,
+    ChatStrategy, ChatTopicStrategy, DialogueKey, DialogueStrategy, GlobalUserStrategy,
+    StrategyStorage, UserInChatStrategy, UserInTopicStrategy,
 };
 
 pub use scene::{Scene, SceneContext, SceneId, SceneManager, SceneRecord};
@@ -288,7 +288,12 @@ where
 /// # #[derive(Clone, Default)]
 /// # enum State { #[default] Start, WaitForAge }
 ///
-/// async fn receive_name(bot: Bot, dialogue: MyDialogue, mut data: DialogueData, msg: Message) -> HandlerResult {
+/// async fn receive_name(
+///     bot: Bot,
+///     dialogue: MyDialogue,
+///     mut data: DialogueData,
+///     msg: Message,
+/// ) -> HandlerResult {
 ///     let name = msg.text().unwrap_or("").to_string();
 ///     data.insert("name".to_string(), serde_json::Value::String(name.clone()));
 ///     dialogue.update(State::WaitForAge).await?;
@@ -296,11 +301,15 @@ where
 ///     Ok(())
 /// }
 ///
-/// async fn receive_age(bot: Bot, dialogue: MyDialogue, mut data: DialogueData, msg: Message) -> HandlerResult {
+/// async fn receive_age(
+///     bot: Bot,
+///     dialogue: MyDialogue,
+///     mut data: DialogueData,
+///     msg: Message,
+/// ) -> HandlerResult {
 ///     let age = msg.text().unwrap_or("").to_string();
-///     let name = data.get("name")
-///         .and_then(|v| v.as_str().map(|s| s.to_string()))
-///         .unwrap_or_default();
+///     let name =
+///         data.get("name").and_then(|v| v.as_str().map(|s| s.to_string())).unwrap_or_default();
 ///     data.clear();
 ///     dialogue.exit().await?;
 ///     bot.send_message(msg.chat.id, format!("Name: {name}, Age: {age}")).await?;
@@ -380,9 +389,9 @@ impl DialogueData {
 
     /// Sets a numeric value.
     pub fn set_number(&mut self, key: impl Into<String>, value: f64) {
-        self.insert(key.into(), serde_json::Value::Number(
-            serde_json::Number::from_f64(value).unwrap_or_default(),
-        ));
+        if let Some(n) = serde_json::Number::from_f64(value) {
+            self.insert(key.into(), serde_json::Value::Number(n));
+        }
     }
 
     /// Gets a numeric value as f64.

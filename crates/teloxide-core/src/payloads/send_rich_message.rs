@@ -2,7 +2,10 @@
 
 use serde::Serialize;
 
-use crate::types::{BusinessConnectionId, EffectId, InputRichMessage, Message, Recipient, ReplyMarkup, ReplyParameters, SuggestedPostParameters, ThreadId, TopicId};
+use crate::types::{
+    BusinessConnectionId, EffectId, InputRichMessage, Message, Recipient, ReplyMarkup,
+    ReplyParameters, SuggestedPostParameters, ThreadId, TopicId,
+};
 
 impl_payload! {
     /// Use this method to send rich messages. On success, the sent Message is returned.

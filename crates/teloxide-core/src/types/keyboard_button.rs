@@ -21,7 +21,8 @@ pub struct KeyboardButton {
     pub icon_custom_emoji_id: Option<String>,
     /// Style of the button. TBA 9.4+
     pub style: Option<String>,
-    /// If specified, pressing the button will open a list of suitable managed bots. TBA 9.6+
+    /// If specified, pressing the button will open a list of suitable managed
+    /// bots. TBA 9.6+
     pub request_managed_bot: Option<crate::types::KeyboardButtonRequestManagedBot>,
 
     /// Request something from user. This is available in private chats only.
@@ -37,7 +38,13 @@ impl KeyboardButton {
     where
         T: Into<String>,
     {
-        Self { text: text.into(), icon_custom_emoji_id: None, style: None, request_managed_bot: None, request: None }
+        Self {
+            text: text.into(),
+            icon_custom_emoji_id: None,
+            style: None,
+            request_managed_bot: None,
+            request: None,
+        }
     }
 
     pub fn request<T>(mut self, val: T) -> Self
@@ -220,9 +227,12 @@ mod tests {
     #[test]
     fn serialize_no_request() {
         let button = KeyboardButton {
-                icon_custom_emoji_id: None,
-                style: None,
-                request_managed_bot: None, text: String::from(""), request: None };
+            icon_custom_emoji_id: None,
+            style: None,
+            request_managed_bot: None,
+            text: String::from(""),
+            request: None,
+        };
         let expected = r#"{"text":""}"#;
         let actual = serde_json::to_string(&button).unwrap();
         assert_eq!(expected, actual);
@@ -230,11 +240,13 @@ mod tests {
 
     #[test]
     fn serialize_request_contact() {
-        let button =
-            KeyboardButton {
-                icon_custom_emoji_id: None,
-                style: None,
-                request_managed_bot: None, text: String::from(""), request: Some(ButtonRequest::Contact) };
+        let button = KeyboardButton {
+            icon_custom_emoji_id: None,
+            style: None,
+            request_managed_bot: None,
+            text: String::from(""),
+            request: Some(ButtonRequest::Contact),
+        };
         let expected = r#"{"text":"","request_contact":true}"#;
         let actual = serde_json::to_string(&button).unwrap();
         assert_eq!(expected, actual);
@@ -243,9 +255,9 @@ mod tests {
     #[test]
     fn serialize_chat_request() {
         let button = KeyboardButton {
-                icon_custom_emoji_id: None,
-                style: None,
-                request_managed_bot: None,
+            icon_custom_emoji_id: None,
+            style: None,
+            request_managed_bot: None,
             text: String::from(""),
             request: Some(ButtonRequest::RequestChat(KeyboardButtonRequestChat::new(
                 RequestId(0),
@@ -261,9 +273,12 @@ mod tests {
     fn deserialize_no_request() {
         let json = r#"{"text":""}"#;
         let expected = KeyboardButton {
-                icon_custom_emoji_id: None,
-                style: None,
-                request_managed_bot: None, text: String::from(""), request: None };
+            icon_custom_emoji_id: None,
+            style: None,
+            request_managed_bot: None,
+            text: String::from(""),
+            request: None,
+        };
         let actual = serde_json::from_str(json).unwrap();
         assert_eq!(expected, actual);
     }
@@ -271,11 +286,13 @@ mod tests {
     #[test]
     fn deserialize_request_contact() {
         let json = r#"{"text":"","request_contact":true}"#;
-        let expected =
-            KeyboardButton {
-                icon_custom_emoji_id: None,
-                style: None,
-                request_managed_bot: None, text: String::from(""), request: Some(ButtonRequest::Contact) };
+        let expected = KeyboardButton {
+            icon_custom_emoji_id: None,
+            style: None,
+            request_managed_bot: None,
+            text: String::from(""),
+            request: Some(ButtonRequest::Contact),
+        };
         let actual = serde_json::from_str(json).unwrap();
         assert_eq!(expected, actual);
     }

@@ -4,8 +4,8 @@ use chrono::{DateTime, Utc};
 use serde::Serialize;
 
 use crate::types::{
-    BusinessConnectionId, EffectId, InputPollMedia, InputPollOption, Message, MessageEntity, ParseMode, PollType,
-    Recipient, ReplyMarkup, ReplyParameters, ThreadId,
+    BusinessConnectionId, EffectId, InputPollMedia, InputPollOption, Message, MessageEntity,
+    ParseMode, PollType, Recipient, ReplyMarkup, ReplyParameters, ThreadId,
 };
 
 impl_payload! {

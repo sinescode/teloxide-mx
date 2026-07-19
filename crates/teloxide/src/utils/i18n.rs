@@ -20,13 +20,7 @@
 //! # }
 //! ```
 
-use std::{
-    collections::HashMap,
-    path::{Path, PathBuf},
-    sync::Arc,
-};
-
-use tokio::sync::RwLock;
+use std::{collections::HashMap, path::PathBuf, sync::Arc};
 
 /// A translation entry mapping a key to translations in different locales.
 #[derive(Debug, Clone)]
@@ -40,10 +34,7 @@ pub struct Translation {
 impl Translation {
     /// Creates a new translation with a default message.
     pub fn new(default: impl Into<String>) -> Self {
-        Self {
-            default: default.into(),
-            translations: HashMap::new(),
-        }
+        Self { default: default.into(), translations: HashMap::new() }
     }
 
     /// Adds a translation for a locale.
@@ -52,12 +43,10 @@ impl Translation {
         self
     }
 
-    /// Returns the translated message for the given locale, falling back to default.
+    /// Returns the translated message for the given locale, falling back to
+    /// default.
     pub fn translate(&self, locale: &str) -> &str {
-        self.translations
-            .get(locale)
-            .map(|s| s.as_str())
-            .unwrap_or(&self.default)
+        self.translations.get(locale).map(|s| s.as_str()).unwrap_or(&self.default)
     }
 }
 
@@ -73,10 +62,7 @@ pub struct I18nContext {
 impl I18nContext {
     /// Creates a new i18n context with the given locale and translations.
     pub fn new(locale: impl Into<String>, translations: HashMap<String, Translation>) -> Self {
-        Self {
-            locale: locale.into(),
-            translations: Arc::new(translations),
-        }
+        Self { locale: locale.into(), translations: Arc::new(translations) }
     }
 
     /// Returns the current locale.
@@ -90,11 +76,11 @@ impl I18nContext {
     }
 
     /// Translates a key to the current locale.
-    pub fn translate(&self, key: &str) -> &str {
+    pub fn translate(&self, key: &str) -> String {
         self.translations
             .get(key)
-            .map(|t| t.translate(&self.locale))
-            .unwrap_or(key)
+            .map(|t| t.translate(&self.locale).to_string())
+            .unwrap_or_else(|| key.to_string())
     }
 
     /// Translates a key with format arguments.
@@ -127,7 +113,11 @@ pub struct I18nLoader {
 
 impl I18nLoader {
     /// Creates a new loader pointing to a locales directory.
-    pub fn new(base_path: impl Into<PathBuf>, default_locale: impl Into<String>, domain: impl Into<String>) -> Self {
+    pub fn new(
+        base_path: impl Into<PathBuf>,
+        default_locale: impl Into<String>,
+        domain: impl Into<String>,
+    ) -> Self {
         Self {
             base_path: base_path.into(),
             default_locale: default_locale.into(),
@@ -152,8 +142,8 @@ impl I18nLoader {
             return Err(I18nError::DirectoryNotFound(self.base_path.clone()));
         }
 
-        for entry in std::fs::read_dir(&self.base_path)
-            .map_err(|e| I18nError::IoError(e.to_string()))?
+        for entry in
+            std::fs::read_dir(&self.base_path).map_err(|e| I18nError::IoError(e.to_string()))?
         {
             let entry = entry.map_err(|e| I18nError::IoError(e.to_string()))?;
             if !entry.file_type().map_err(|e| I18nError::IoError(e.to_string()))?.is_dir() {
@@ -168,9 +158,8 @@ impl I18nLoader {
                     .map_err(|e| I18nError::IoError(e.to_string()))?;
                 let parsed = parse_po(&content);
                 for (key, value) in parsed {
-                    let entry = translations
-                        .entry(key)
-                        .or_insert_with(|| Translation::new(key.clone()));
+                    let entry =
+                        translations.entry(key.clone()).or_insert_with(|| Translation::new(key));
                     entry.translations.insert(locale.clone(), value);
                 }
             }
@@ -180,17 +169,14 @@ impl I18nLoader {
     }
 
     /// Loads translations from a Rust HashMap.
-    pub fn load_hashmap(data: HashMap<String, HashMap<String, String>>) -> HashMap<String, Translation> {
+    pub fn load_hashmap(
+        data: HashMap<String, HashMap<String, String>>,
+    ) -> HashMap<String, Translation> {
         data.into_iter()
             .map(|(key, locales)| {
-                let default = locales
-                    .get("en")
-                    .cloned()
-                    .unwrap_or_else(|| key.clone());
-                Translation {
-                    default,
-                    translations: locales,
-                }
+                let default = locales.get("en").cloned().unwrap_or_else(|| key.clone());
+                let translation = Translation { default, translations: locales };
+                (key, translation)
             })
             .collect()
     }
@@ -238,7 +224,14 @@ fn parse_po(content: &str) -> Vec<(String, String)> {
 }
 
 fn extract_po_string(line: &str) -> Option<String> {
-    let rest = line.strip_prefix("msgid ")?.strip_prefix('"')?;
+    let rest = if let Some(r) = line.strip_prefix("msgid ") {
+        r
+    } else if let Some(r) = line.strip_prefix("msgstr ") {
+        r
+    } else {
+        return None;
+    };
+    let rest = rest.strip_prefix('"')?;
     let end = rest.find('"')?;
     Some(rest[..end].to_string())
 }
@@ -249,9 +242,7 @@ mod tests {
 
     #[test]
     fn translation_basic() {
-        let t = Translation::new("Hello")
-            .with_locale("es", "Hola")
-            .with_locale("fr", "Bonjour");
+        let t = Translation::new("Hello").with_locale("es", "Hola").with_locale("fr", "Bonjour");
 
         assert_eq!(t.translate("en"), "Hello");
         assert_eq!(t.translate("es"), "Hola");
@@ -278,8 +269,7 @@ mod tests {
         let mut translations = HashMap::new();
         translations.insert(
             "greeting".to_string(),
-            Translation::new("Hello, {name}!")
-                .with_locale("es", "¡Hola, {name}!"),
+            Translation::new("Hello, {name}!").with_locale("es", "¡Hola, {name}!"),
         );
 
         let ctx = I18nContext::new("es", translations);

@@ -17,9 +17,7 @@
 //! }
 //! ```
 
-use crate::types::{
-    InputMedia, InputMediaAudio, InputMediaDocument, InputMediaPhoto, InputMediaVideo, MessageEntity,
-};
+use crate::types::{InputMedia, MessageEntity};
 
 /// Maximum number of media in a group (Telegram limit).
 pub const MAX_MEDIA_GROUP_SIZE: usize = 10;
@@ -34,11 +32,7 @@ pub struct MediaGroupBuilder {
 impl MediaGroupBuilder {
     /// Creates a new empty `MediaGroupBuilder`.
     pub fn new() -> Self {
-        Self {
-            media: Vec::new(),
-            caption: None,
-            caption_entities: None,
-        }
+        Self { media: Vec::new(), caption: None, caption_entities: None }
     }
 
     /// Sets a shared caption for all media in the group.

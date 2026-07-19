@@ -2,7 +2,10 @@
 
 use serde::Serialize;
 
-use crate::types::{BusinessConnectionId, CallbackQueryId, EffectId, InputFile, Message, MessageEntity, ParseMode, Recipient, ReplyMarkup, ReplyParameters, SuggestedPostParameters, ThreadId, TopicId, UserId};
+use crate::types::{
+    BusinessConnectionId, CallbackQueryId, EffectId, InputFile, Message, MessageEntity, ParseMode,
+    Recipient, ReplyMarkup, ReplyParameters, SuggestedPostParameters, ThreadId, TopicId, UserId,
+};
 
 impl_payload! {
     @[multipart = live_photo, photo]

@@ -23,16 +23,20 @@
 //! # }
 //! ```
 
-use crate::types::{Update, Message};
-use crate::Bot;
-use std::future::Future;
-use std::pin::Pin;
-use std::sync::Arc;
+use crate::{
+    types::{Message, Update, UpdateKind},
+    Bot,
+};
+use std::{future::Future, pin::Pin, sync::Arc};
 
 /// A simplified handler function type for serverless.
 pub type ServerlessHandler = Box<
-    dyn Fn(Bot, Update) -> Pin<Box<dyn Future<Output = Result<(), Box<dyn std::error::Error + Send + Sync>>> + Send>>
-        + Send
+    dyn Fn(
+            Bot,
+            Update,
+        ) -> Pin<
+            Box<dyn Future<Output = Result<(), Box<dyn std::error::Error + Send + Sync>>> + Send>,
+        > + Send
         + Sync,
 >;
 
@@ -47,9 +51,7 @@ impl LambdaHandler {
     pub fn new<F, Fut>(bot: Bot, handler: F) -> Self
     where
         F: Fn(Bot, Message) -> Fut + Send + Sync + 'static,
-        Fut: Future<Output = Result<(), Box<dyn std::error::Error + Send + Sync>>>
-            + Send
-            + 'static,
+        Fut: Future<Output = Result<(), Box<dyn std::error::Error + Send + Sync>>> + Send + 'static,
     {
         let handler = Arc::new(handler);
         Self {
@@ -57,7 +59,7 @@ impl LambdaHandler {
             handler: Arc::new(Box::new(move |bot, update| {
                 let handler = Arc::clone(&handler);
                 Box::pin(async move {
-                    if let Some(msg) = update.message() {
+                    if let UpdateKind::Message(msg) = &update.kind {
                         handler(bot, msg.clone()).await
                     } else {
                         Ok(())
@@ -116,9 +118,7 @@ impl ServerlessWebhookHandler {
     pub fn new<F, Fut>(bot: Bot, handler: F) -> Self
     where
         F: Fn(Bot, Message) -> Fut + Send + Sync + 'static,
-        Fut: Future<Output = Result<(), Box<dyn std::error::Error + Send + Sync>>>
-            + Send
-            + 'static,
+        Fut: Future<Output = Result<(), Box<dyn std::error::Error + Send + Sync>>> + Send + 'static,
     {
         let handler = Arc::new(handler);
         Self {
@@ -126,7 +126,7 @@ impl ServerlessWebhookHandler {
             handler: Arc::new(Box::new(move |bot, update| {
                 let handler = Arc::clone(&handler);
                 Box::pin(async move {
-                    if let Some(msg) = update.message() {
+                    if let UpdateKind::Message(msg) = &update.kind {
                         handler(bot, msg.clone()).await
                     } else {
                         Ok(())
@@ -187,9 +187,7 @@ impl CloudFunctionsHandler {
     pub fn new<F, Fut>(bot: Bot, handler: F) -> Self
     where
         F: Fn(Bot, Message) -> Fut + Send + Sync + 'static,
-        Fut: Future<Output = Result<(), Box<dyn std::error::Error + Send + Sync>>>
-            + Send
-            + 'static,
+        Fut: Future<Output = Result<(), Box<dyn std::error::Error + Send + Sync>>> + Send + 'static,
     {
         let handler = Arc::new(handler);
         Self {
@@ -197,7 +195,7 @@ impl CloudFunctionsHandler {
             handler: Arc::new(Box::new(move |bot, update| {
                 let handler = Arc::clone(&handler);
                 Box::pin(async move {
-                    if let Some(msg) = update.message() {
+                    if let UpdateKind::Message(msg) = &update.kind {
                         handler(bot, msg.clone()).await
                     } else {
                         Ok(())
@@ -234,9 +232,7 @@ impl WorkersHandler {
     pub fn new<F, Fut>(bot: Bot, handler: F) -> Self
     where
         F: Fn(Bot, Message) -> Fut + Send + Sync + 'static,
-        Fut: Future<Output = Result<(), Box<dyn std::error::Error + Send + Sync>>>
-            + Send
-            + 'static,
+        Fut: Future<Output = Result<(), Box<dyn std::error::Error + Send + Sync>>> + Send + 'static,
     {
         let handler = Arc::new(handler);
         Self {
@@ -244,7 +240,7 @@ impl WorkersHandler {
             handler: Arc::new(Box::new(move |bot, update| {
                 let handler = Arc::clone(&handler);
                 Box::pin(async move {
-                    if let Some(msg) = update.message() {
+                    if let UpdateKind::Message(msg) = &update.kind {
                         handler(bot, msg.clone()).await
                     } else {
                         Ok(())

@@ -16,10 +16,5 @@ pub enum InputPollMedia {
     Document { media: InputFile },
     Sticker { media: InputFile },
     Location { latitude: f64, longitude: f64 },
-    Venue {
-        latitude: f64,
-        longitude: f64,
-        title: String,
-        address: String,
-    },
+    Venue { latitude: f64, longitude: f64, title: String, address: String },
 }

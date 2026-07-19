@@ -12,8 +12,7 @@ use crate::types::{
 /// # Example
 ///
 /// ```rust
-/// use teloxide::utils::keyboard::InlineKeyboardBuilder;
-/// use teloxide::types::InlineKeyboardButton;
+/// use teloxide::{types::InlineKeyboardButton, utils::keyboard::InlineKeyboardBuilder};
 ///
 /// let keyboard = InlineKeyboardBuilder::new()
 ///     .callback_button("Button 1", "btn1")
@@ -30,18 +29,13 @@ pub struct InlineKeyboardBuilder {
 impl InlineKeyboardBuilder {
     /// Creates a new empty `InlineKeyboardBuilder`.
     pub fn new() -> Self {
-        Self {
-            rows: Vec::new(),
-            current_row: Vec::new(),
-        }
+        Self { rows: Vec::new(), current_row: Vec::new() }
     }
 
     /// Creates a new builder from an existing markup.
-    pub fn from_markup(markup: InlineKeyboardMarkup) -> Self {
-        Self {
-            rows: markup.inline_keyboard,
-            current_row: Vec::new(),
-        }
+    pub fn from_markup(mut markup: InlineKeyboardMarkup) -> Self {
+        let current_row = markup.inline_keyboard.pop().unwrap_or_default();
+        Self { rows: markup.inline_keyboard, current_row }
     }
 
     /// Adds a button to the current row.
@@ -51,7 +45,7 @@ impl InlineKeyboardBuilder {
     }
 
     /// Adds a URL button to the current row.
-    pub fn url_button<S>(self, text: S, url: reqwest::Url) -> Self
+    pub fn url_button<S>(self, text: S, url: url::Url) -> Self
     where
         S: Into<String>,
     {
@@ -98,9 +92,7 @@ impl InlineKeyboardBuilder {
         S: Into<String>,
         Q: Into<String>,
     {
-        self.button(InlineKeyboardButton::switch_inline_query_current_chat(
-            text, query,
-        ))
+        self.button(InlineKeyboardButton::switch_inline_query_current_chat(text, query))
     }
 
     /// Adds a copy text button to the current row.
@@ -116,7 +108,7 @@ impl InlineKeyboardBuilder {
     where
         S: Into<String>,
     {
-        self.button(InlineKeyboardButton::callback_game(text, CallbackGame))
+        self.button(InlineKeyboardButton::callback_game(text, CallbackGame {}))
     }
 
     /// Adds a pay button to the current row.
@@ -141,12 +133,8 @@ impl InlineKeyboardBuilder {
     /// to have exactly `per_row` buttons per row.
     pub fn adjust(mut self, per_row: usize) -> Self {
         // Collect all buttons
-        let mut all_buttons: Vec<InlineKeyboardButton> = self
-            .rows
-            .into_iter()
-            .flatten()
-            .chain(self.current_row)
-            .collect();
+        let mut all_buttons: Vec<InlineKeyboardButton> =
+            self.rows.iter().flatten().cloned().chain(self.current_row.iter().cloned()).collect();
 
         // Reorganize into rows of per_row
         self.rows.clear();
@@ -168,11 +156,7 @@ impl InlineKeyboardBuilder {
         let original_rows: Vec<Vec<InlineKeyboardButton>> = self
             .rows
             .into_iter()
-            .chain(if self.current_row.is_empty() {
-                None
-            } else {
-                Some(self.current_row)
-            })
+            .chain(if self.current_row.is_empty() { None } else { Some(self.current_row) })
             .collect();
 
         let mut builder = Self::new();
@@ -303,12 +287,8 @@ impl ReplyKeyboardBuilder {
 
     /// Adjusts buttons to have `per_row` buttons per row.
     pub fn adjust(mut self, per_row: usize) -> Self {
-        let mut all_buttons: Vec<KeyboardButton> = self
-            .rows
-            .into_iter()
-            .flatten()
-            .chain(self.current_row)
-            .collect();
+        let mut all_buttons: Vec<KeyboardButton> =
+            self.rows.iter().flatten().cloned().chain(self.current_row.iter().cloned()).collect();
 
         self.rows.clear();
         self.current_row.clear();
@@ -326,11 +306,7 @@ impl ReplyKeyboardBuilder {
         let original_rows: Vec<Vec<KeyboardButton>> = self
             .rows
             .into_iter()
-            .chain(if self.current_row.is_empty() {
-                None
-            } else {
-                Some(self.current_row)
-            })
+            .chain(if self.current_row.is_empty() { None } else { Some(self.current_row) })
             .collect();
 
         let mut builder = Self::new();
@@ -465,13 +441,12 @@ mod tests {
 
     #[test]
     fn inline_keyboard_builder_from_markup() {
-        let markup = InlineKeyboardMarkup::new(vec![vec![
-            InlineKeyboardButton::callback("existing", "data"),
-        ]]);
+        let markup = InlineKeyboardMarkup::new(vec![vec![InlineKeyboardButton::callback(
+            "existing", "data",
+        )]]);
 
-        let keyboard = InlineKeyboardBuilder::from_markup(markup)
-            .callback_button("new", "new_data")
-            .build();
+        let keyboard =
+            InlineKeyboardBuilder::from_markup(markup).callback_button("new", "new_data").build();
 
         assert_eq!(keyboard.inline_keyboard.len(), 1);
         assert_eq!(keyboard.inline_keyboard[0].len(), 2);
@@ -538,18 +513,14 @@ mod tests {
 
     #[test]
     fn build_markup_inline() {
-        let markup = InlineKeyboardBuilder::new()
-            .callback_button("Btn", "data")
-            .build_markup();
+        let markup = InlineKeyboardBuilder::new().callback_button("Btn", "data").build_markup();
 
         assert!(matches!(markup, ReplyMarkup::InlineKeyboard(_)));
     }
 
     #[test]
     fn build_markup_reply() {
-        let markup = ReplyKeyboardBuilder::new()
-            .button("Btn")
-            .build_markup();
+        let markup = ReplyKeyboardBuilder::new().button("Btn").build_markup();
 
         assert!(matches!(markup, ReplyMarkup::Keyboard(_)));
     }

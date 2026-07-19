@@ -6,19 +6,21 @@
 //! # Example
 //!
 //! ```rust
-//! use teloxide::prelude::*;
-//! use teloxide::utils::magic_filter::{F, Filter};
+//! use teloxide::{
+//!     prelude::*,
+//!     utils::magic_filter::{Filter, F},
+//! };
 //!
 //! // Simple filters
-//! let f = F::text;                          // Has text
-//! let f = F::text.contains("hello");        // Text contains "hello"
-//! let f = F::text.startswith("!");          // Text starts with "!"
-//! let f = F::text.regexp(r"^\d+$");         // Text is all digits
-//! let f = F::from_user.id(123);             // From specific user
-//! let f = F::chat.is_private();             // In private chat
-//! let f = F::chat.is_group();              // In group chat
-//! let f = F::has_photo;                     // Has photo
-//! let f = F::has_document;                  // Has document
+//! let f = F::text; // Has text
+//! let f = F::text.contains("hello"); // Text contains "hello"
+//! let f = F::text.startswith("!"); // Text starts with "!"
+//! let f = F::text.regexp(r"^\d+$"); // Text is all digits
+//! let f = F::from_user.id(123); // From specific user
+//! let f = F::chat.is_private(); // In private chat
+//! let f = F::chat.is_group(); // In group chat
+//! let f = F::has_photo; // Has photo
+//! let f = F::has_document; // Has document
 //!
 //! // Composed filters
 //! let f = F::text.contains("admin") & F::from_user.id(123);
@@ -26,7 +28,7 @@
 //! let f = !F::from_user.is_bot;
 //! ```
 
-use crate::types::{ChatType, Message, UserId, ChatId};
+use crate::types::{ChatId, ChatKind, Message, PublicChatKind, UserId};
 
 /// Magic filter entry point.
 pub struct F;
@@ -73,9 +75,7 @@ impl TextFilter {
     pub fn regexp(self, pattern: &'static str) -> ComposedFilter {
         ComposedFilter::new(move |msg| {
             msg.text().map_or(false, |t| {
-                regex::Regex::new(pattern)
-                    .map(|re| re.is_match(t))
-                    .unwrap_or(false)
+                regex::Regex::new(pattern).map(|re| re.is_match(t)).unwrap_or(false)
             })
         })
     }
@@ -83,8 +83,7 @@ impl TextFilter {
     /// Checks if text equals a value (case-insensitive).
     pub fn eq_ignore_case(self, s: &'static str) -> ComposedFilter {
         ComposedFilter::new(move |msg| {
-            msg.text()
-                .map_or(false, |t| t.to_lowercase() == s.to_lowercase())
+            msg.text().map_or(false, |t| t.to_lowercase() == s.to_lowercase())
         })
     }
 
@@ -127,9 +126,7 @@ impl UserFilter {
     /// Checks if the user has a specific username.
     pub fn username(self, name: &'static str) -> ComposedFilter {
         ComposedFilter::new(move |msg| {
-            msg.from
-                .as_ref()
-                .map_or(false, |u| u.username.as_deref() == Some(name))
+            msg.from.as_ref().map_or(false, |u| u.username.as_deref() == Some(name))
         })
     }
 }
@@ -140,7 +137,7 @@ pub struct ChatFilter;
 impl ChatFilter {
     /// Checks if the chat is private.
     pub fn is_private(self) -> ComposedFilter {
-        ComposedFilter::new(|msg| msg.chat.kind == ChatType::Private)
+        ComposedFilter::new(|msg| matches!(msg.chat.kind, ChatKind::Private(_)))
     }
 
     /// Checks if the chat is a group or supergroup.
@@ -148,19 +145,29 @@ impl ChatFilter {
         ComposedFilter::new(|msg| {
             matches!(
                 msg.chat.kind,
-                ChatType::Group | ChatType::Supergroup
+                ChatKind::Public(ref p) if matches!(p.kind, PublicChatKind::Group | PublicChatKind::Supergroup(_))
             )
         })
     }
 
     /// Checks if the chat is a supergroup.
     pub fn is_supergroup(self) -> ComposedFilter {
-        ComposedFilter::new(|msg| msg.chat.kind == ChatType::Supergroup)
+        ComposedFilter::new(|msg| {
+            matches!(
+                msg.chat.kind,
+                ChatKind::Public(ref p) if matches!(p.kind, PublicChatKind::Supergroup(_))
+            )
+        })
     }
 
     /// Checks if the chat is a channel.
     pub fn is_channel(self) -> ComposedFilter {
-        ComposedFilter::new(|msg| msg.chat.kind == ChatType::Channel)
+        ComposedFilter::new(|msg| {
+            matches!(
+                msg.chat.kind,
+                ChatKind::Public(ref p) if matches!(p.kind, PublicChatKind::Channel(_))
+            )
+        })
     }
 
     /// Checks if the chat has a specific ID.
@@ -201,9 +208,7 @@ impl ComposedFilter {
     where
         F: Fn(&Message) -> bool + Send + Sync + 'static,
     {
-        Self {
-            predicate: Box::new(predicate),
-        }
+        Self { predicate: Box::new(predicate) }
     }
 
     /// Tests if the message matches this filter.
@@ -213,16 +218,12 @@ impl ComposedFilter {
 
     /// Combines two filters with AND.
     pub fn and(self, other: ComposedFilter) -> ComposedFilter {
-        ComposedFilter::new(move |msg| {
-            (self.predicate)(msg) && (other.predicate)(msg)
-        })
+        ComposedFilter::new(move |msg| (self.predicate)(msg) && (other.predicate)(msg))
     }
 
     /// Combines two filters with OR.
     pub fn or(self, other: ComposedFilter) -> ComposedFilter {
-        ComposedFilter::new(move |msg| {
-            (self.predicate)(msg) || (other.predicate)(msg)
-        })
+        ComposedFilter::new(move |msg| (self.predicate)(msg) || (other.predicate)(msg))
     }
 
     /// Negates this filter.
@@ -273,16 +274,15 @@ impl FilterExt for Message {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::types::{Chat, ChatPrivate, MessageCommon, MessageKind, MediaKind, MediaText, User};
+    use crate::types::{
+        Chat, ChatKind, ChatPrivate, MediaKind, MediaText, MessageCommon, MessageKind, User,
+    };
 
     fn make_message(text: &str) -> Message {
         Message {
             id: crate::types::MessageId(1),
-            chat: Chat {
-                id: ChatId(1),
-                kind: ChatType::Private,
-                ..Default::default()
-            },
+            thread_id: None,
+            direct_messages_topic: None,
             from: Some(User {
                 id: UserId(1),
                 is_bot: false,
@@ -292,9 +292,54 @@ mod tests {
                 language_code: Some("en".to_string()),
                 is_premium: false,
                 added_to_attachment_menu: false,
+                has_topics_enabled: false,
+                allows_users_to_create_topics: false,
             }),
-            text: Some(text.to_string()),
-            ..Default::default()
+            sender_chat: None,
+            date: chrono::Utc::now(),
+            chat: Chat {
+                id: ChatId(1),
+                kind: ChatKind::Private(ChatPrivate {
+                    username: None,
+                    first_name: None,
+                    last_name: None,
+                }),
+            },
+            is_topic_message: false,
+            suggested_post_info: None,
+            is_paid_post: false,
+            via_bot: None,
+            sender_business_bot: None,
+            kind: MessageKind::Common(MessageCommon {
+                sender_tag: None,
+                receiver_user: None,
+                ephemeral_message_id: None,
+                guest_bot_caller_user: None,
+                guest_bot_caller_chat: None,
+                guest_query_id: None,
+                reply_to_poll_option_id: None,
+                author_signature: None,
+                paid_star_count: None,
+                effect_id: None,
+                forward_origin: None,
+                reply_to_message: None,
+                external_reply: None,
+                quote: None,
+                reply_to_story: None,
+                reply_to_checklist_task_id: None,
+                sender_boost_count: None,
+                edit_date: None,
+                media_kind: MediaKind::Text(MediaText {
+                    text: text.to_string(),
+                    entities: vec![],
+                    link_preview_options: None,
+                }),
+                reply_markup: None,
+                is_automatic_forward: false,
+                has_protected_content: false,
+                is_from_offline: false,
+                business_connection_id: None,
+            }),
         }
     }
 

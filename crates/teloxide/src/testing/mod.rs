@@ -31,8 +31,8 @@
 //! ```
 
 use crate::types::{
-    Chat, ChatId, ChatKind, ChatPrivate, Message, MessageCommon, MessageId, MessageKind,
-    Update, UpdateId, UpdateKind, User, UserId, MediaKind, MediaText,
+    CallbackQueryId, ChatId, InlineQueryId, Message, MessageId, Update, UpdateId, UpdateKind, User,
+    UserId,
 };
 use std::sync::{Arc, Mutex};
 
@@ -53,26 +53,17 @@ pub struct SentMessage {
 impl MockBot {
     /// Creates a new mock bot.
     pub fn new() -> Self {
-        Self {
-            sent_messages: Arc::new(Mutex::new(Vec::new())),
-            token: "TEST_TOKEN".to_string(),
-        }
+        Self { sent_messages: Arc::new(Mutex::new(Vec::new())), token: "TEST_TOKEN".to_string() }
     }
 
     /// Creates a mock bot with a custom token.
     pub fn with_token(token: impl Into<String>) -> Self {
-        Self {
-            sent_messages: Arc::new(Mutex::new(Vec::new())),
-            token: token.into(),
-        }
+        Self { sent_messages: Arc::new(Mutex::new(Vec::new())), token: token.into() }
     }
 
     /// Records a sent message.
     pub fn record_sent(&self, chat_id: ChatId, text: impl Into<String>) {
-        self.sent_messages.lock().unwrap().push(SentMessage {
-            chat_id,
-            text: text.into(),
-        });
+        self.sent_messages.lock().unwrap().push(SentMessage { chat_id, text: text.into() });
     }
 
     /// Returns all sent messages.
@@ -87,11 +78,7 @@ impl MockBot {
 
     /// Checks if a message with the given text was sent.
     pub fn has_sent_message(&self, text: &str) -> bool {
-        self.sent_messages
-            .lock()
-            .unwrap()
-            .iter()
-            .any(|m| m.text == text)
+        self.sent_messages.lock().unwrap().iter().any(|m| m.text == text)
     }
 
     /// Checks if a message was sent to the given chat.
@@ -156,18 +143,12 @@ impl UpdateBuilder {
 
     /// Creates a builder from an existing update.
     pub fn from_update(update: Update) -> Self {
-        Self {
-            update_id: update.id,
-            kind: update.kind,
-        }
+        Self { update_id: update.id, kind: update.kind }
     }
 
     /// Builds the update.
     pub fn build(self) -> Update {
-        Update {
-            id: self.update_id,
-            kind: self.kind,
-        }
+        Update { id: self.update_id, kind: self.kind }
     }
 }
 
@@ -215,61 +196,33 @@ impl MessageUpdateBuilder {
     /// Builds the update.
     pub fn build(self) -> Update {
         let text = self.text.unwrap_or_default();
-        Update {
-            id: UpdateId(1),
-            kind: UpdateKind::Message(Message {
-                id: self.message_id,
-                thread_id: None,
-                from: Some(User {
-                    id: self.user_id,
-                    is_bot: false,
-                    first_name: self.user_name.clone(),
-                    last_name: None,
-                    username: Some(self.user_name),
-                    language_code: Some("en".to_string()),
-                    is_premium: false,
-                    added_to_attachment_menu: false,
-                }),
-                sender_chat: None,
-                is_topic_message: false,
-                is_paid_post: false,
-                suggested_post_info: None,
-                sender_business_bot: None,
-                date: crate::types::chrono::DateTime::from_timestamp(1_569_518_829, 0).unwrap(),
-                chat: Chat {
-                    id: self.chat_id,
-                    kind: ChatKind::Private(ChatPrivate {
-                        username: Some("test".to_string()),
-                        first_name: Some(self.chat_name),
-                        last_name: None,
-                    }),
-                },
-                direct_messages_topic: None,
-                kind: MessageKind::Common(MessageCommon {
-                    reply_to_message: None,
-                    forward_origin: None,
-                    external_reply: None,
-                    quote: None,
-                    edit_date: None,
-                    media_kind: MediaKind::Text(MediaText {
-                        text,
-                        entities: vec![],
-                        link_preview_options: None,
-                    }),
-                    reply_markup: None,
-                    author_signature: None,
-                    paid_star_count: None,
-                    effect_id: None,
-                    is_automatic_forward: false,
-                    has_protected_content: false,
-                    reply_to_checklist_task_id: None,
-                    reply_to_story: None,
-                    sender_boost_count: None,
-                    is_from_offline: false,
-                    business_connection_id: None,
-                }),
-            }),
-        }
+        let user_id = self.user_id.0;
+        let user_name = &self.user_name;
+        let chat_id = self.chat_id.0;
+        let chat_name = &self.chat_name;
+        let message_id = self.message_id.0;
+
+        let json = serde_json::json!({
+            "message_id": message_id,
+            "from": {
+                "id": user_id,
+                "is_bot": false,
+                "first_name": user_name,
+                "username": user_name,
+            },
+            "chat": {
+                "id": chat_id,
+                "type": "private",
+                "first_name": chat_name,
+            },
+            "date": 1_569_518_829_i64,
+            "text": text,
+        });
+
+        let message: Message =
+            serde_json::from_value(json).expect("failed to deserialize test Message");
+
+        Update { id: UpdateId(1), kind: UpdateKind::Message(message) }
     }
 }
 
@@ -306,7 +259,7 @@ impl CallbackQueryUpdateBuilder {
         Update {
             id: UpdateId(1),
             kind: UpdateKind::CallbackQuery(CallbackQuery {
-                id: "test_callback".to_string(),
+                id: CallbackQueryId("test_callback".to_string()),
                 from: User {
                     id: self.user_id,
                     is_bot: false,
@@ -316,6 +269,8 @@ impl CallbackQueryUpdateBuilder {
                     language_code: Some("en".to_string()),
                     is_premium: false,
                     added_to_attachment_menu: false,
+                    has_topics_enabled: false,
+                    allows_users_to_create_topics: false,
                 },
                 chat_instance: "test".to_string(),
                 data: self.data,
@@ -353,7 +308,7 @@ impl InlineQueryUpdateBuilder {
         Update {
             id: UpdateId(1),
             kind: UpdateKind::InlineQuery(InlineQuery {
-                id: "test_inline".to_string(),
+                id: InlineQueryId("test_inline".to_string()),
                 from: User {
                     id: self.user_id,
                     is_bot: false,
@@ -363,6 +318,8 @@ impl InlineQueryUpdateBuilder {
                     language_code: Some("en".to_string()),
                     is_premium: false,
                     added_to_attachment_menu: false,
+                    has_topics_enabled: false,
+                    allows_users_to_create_topics: false,
                 },
                 query: self.query,
                 offset: String::new(),
@@ -380,11 +337,7 @@ pub fn mock_message(text: &str) -> Update {
 
 /// Creates a mock message update from a specific user.
 pub fn mock_message_from(text: &str, user_id: u64, chat_id: i64) -> Update {
-    UpdateBuilder::message()
-        .with_text(text)
-        .with_user_id(user_id)
-        .with_chat_id(chat_id)
-        .build()
+    UpdateBuilder::message().with_text(text).with_user_id(user_id).with_chat_id(chat_id).build()
 }
 
 /// Creates a mock callback query update.
@@ -428,11 +381,8 @@ mod tests {
 
     #[test]
     fn message_update_builder() {
-        let update = UpdateBuilder::message()
-            .with_text("test")
-            .with_user_id(42)
-            .with_chat_id(100)
-            .build();
+        let update =
+            UpdateBuilder::message().with_text("test").with_user_id(42).with_chat_id(100).build();
 
         assert_eq!(update.id, UpdateId(1));
         if let UpdateKind::Message(msg) = &update.kind {
@@ -446,10 +396,8 @@ mod tests {
 
     #[test]
     fn callback_query_builder() {
-        let update = UpdateBuilder::callback_query()
-            .with_data("action:confirm")
-            .with_user_id(42)
-            .build();
+        let update =
+            UpdateBuilder::callback_query().with_data("action:confirm").with_user_id(42).build();
 
         if let UpdateKind::CallbackQuery(q) = &update.kind {
             assert_eq!(q.data.as_deref(), Some("action:confirm"));

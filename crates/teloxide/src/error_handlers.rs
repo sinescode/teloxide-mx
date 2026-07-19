@@ -258,9 +258,7 @@ pub struct ErrorRouter<E> {
 impl<E> ErrorRouter<E> {
     /// Creates a new error router.
     pub fn new() -> Self {
-        Self {
-            handlers: Vec::new(),
-        }
+        Self { handlers: Vec::new() }
     }
 }
 
@@ -281,18 +279,12 @@ pub struct ErrorEvent<E> {
 impl<E> ErrorEvent<E> {
     /// Creates a new error event.
     pub fn new(error: E) -> Self {
-        Self {
-            error,
-            update: None,
-        }
+        Self { error, update: None }
     }
 
     /// Creates a new error event with an update context.
     pub fn with_update(error: E, update: Arc<crate::types::Update>) -> Self {
-        Self {
-            error,
-            update: Some(update),
-        }
+        Self { error, update: Some(update) }
     }
 }
 

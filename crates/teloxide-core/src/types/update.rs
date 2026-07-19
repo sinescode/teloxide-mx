@@ -211,9 +211,7 @@ impl Update {
             | Poll(_)
             | ManagedBotCreated(_)
             | ManagedBotUpdated(_)
-            | Error(_) => {
-                return None
-            }
+            | Error(_) => return None,
 
             Subscription(s) => &s.user,
             GuestMessage(m) => m.from.as_ref()?,

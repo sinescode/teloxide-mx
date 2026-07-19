@@ -6,7 +6,7 @@
 //! # Example
 //!
 //! ```rust
-//! use teloxide::utils::formatting::{Text, Bold, Italic, Code, Link};
+//! use teloxide::utils::formatting::{Bold, Code, Italic, Link, Text};
 //!
 //! let text = Text::new(vec![
 //!     Box::new(Bold::new("Hello")),
@@ -35,9 +35,7 @@ pub struct Text {
 impl Text {
     /// Creates a new `Text` from raw string.
     pub fn raw(s: impl Into<String>) -> Self {
-        Self {
-            children: vec![Box::new(RawText(s.into()))],
-        }
+        Self { children: vec![Box::new(RawText(s.into()))] }
     }
 
     /// Creates a new `Text` from a list of child nodes.
@@ -56,19 +54,29 @@ impl Text {
         let mut entities = Vec::new();
         for child in &self.children {
             let (child_text, child_entities) = child.render(text.len());
-            for mut entity in child_entities {
-                entity.offset += text.len();
-                entities.push(entity);
-            }
+            entities.extend(child_entities);
             text.push_str(&child_text);
         }
         (text, entities)
     }
 
     /// Creates a `Text` from existing text and entities.
-    pub fn from_entities(text: &str, entities: &[MessageEntity]) -> Self {
+    pub fn from_entities(text: &str, _entities: &[MessageEntity]) -> Self {
         // Reconstruct the tree from entities (simplified: just return raw text)
         Self::raw(text)
+    }
+}
+
+impl FormatNode for Text {
+    fn render(&self, offset: usize) -> (String, Vec<MessageEntity>) {
+        let mut text = String::new();
+        let mut entities = Vec::new();
+        for child in &self.children {
+            let (child_text, child_entities) = child.render(offset + text.len());
+            entities.extend(child_entities);
+            text.push_str(&child_text);
+        }
+        (text, entities)
     }
 }
 
@@ -92,14 +100,7 @@ impl Bold {
 impl FormatNode for Bold {
     fn render(&self, offset: usize) -> (String, Vec<MessageEntity>) {
         let len = utf16_len(&self.0);
-        (
-            self.0.clone(),
-            vec![MessageEntity {
-                offset,
-                length: len,
-                kind: MessageEntityKind::Bold,
-            }],
-        )
+        (self.0.clone(), vec![MessageEntity { offset, length: len, kind: MessageEntityKind::Bold }])
     }
 }
 
@@ -117,11 +118,7 @@ impl FormatNode for Italic {
         let len = utf16_len(&self.0);
         (
             self.0.clone(),
-            vec![MessageEntity {
-                offset,
-                length: len,
-                kind: MessageEntityKind::Italic,
-            }],
+            vec![MessageEntity { offset, length: len, kind: MessageEntityKind::Italic }],
         )
     }
 }
@@ -140,11 +137,7 @@ impl FormatNode for Underline {
         let len = utf16_len(&self.0);
         (
             self.0.clone(),
-            vec![MessageEntity {
-                offset,
-                length: len,
-                kind: MessageEntityKind::Underline,
-            }],
+            vec![MessageEntity { offset, length: len, kind: MessageEntityKind::Underline }],
         )
     }
 }
@@ -163,11 +156,7 @@ impl FormatNode for Strikethrough {
         let len = utf16_len(&self.0);
         (
             self.0.clone(),
-            vec![MessageEntity {
-                offset,
-                length: len,
-                kind: MessageEntityKind::Strikethrough,
-            }],
+            vec![MessageEntity { offset, length: len, kind: MessageEntityKind::Strikethrough }],
         )
     }
 }
@@ -186,11 +175,7 @@ impl FormatNode for Spoiler {
         let len = utf16_len(&self.0);
         (
             self.0.clone(),
-            vec![MessageEntity {
-                offset,
-                length: len,
-                kind: MessageEntityKind::Spoiler,
-            }],
+            vec![MessageEntity { offset, length: len, kind: MessageEntityKind::Spoiler }],
         )
     }
 }
@@ -207,14 +192,7 @@ impl Code {
 impl FormatNode for Code {
     fn render(&self, offset: usize) -> (String, Vec<MessageEntity>) {
         let len = utf16_len(&self.0);
-        (
-            self.0.clone(),
-            vec![MessageEntity {
-                offset,
-                length: len,
-                kind: MessageEntityKind::Code,
-            }],
-        )
+        (self.0.clone(), vec![MessageEntity { offset, length: len, kind: MessageEntityKind::Code }])
     }
 }
 
@@ -226,10 +204,7 @@ pub struct Pre {
 
 impl Pre {
     pub fn new(s: impl Into<String>) -> Self {
-        Self {
-            text: s.into(),
-            language: None,
-        }
+        Self { text: s.into(), language: None }
     }
 
     pub fn language(mut self, lang: impl Into<String>) -> Self {
@@ -246,9 +221,7 @@ impl FormatNode for Pre {
             vec![MessageEntity {
                 offset,
                 length: len,
-                kind: MessageEntityKind::Pre {
-                    language: self.language.clone(),
-                },
+                kind: MessageEntityKind::Pre { language: self.language.clone() },
             }],
         )
     }
@@ -262,10 +235,7 @@ pub struct Link {
 
 impl Link {
     pub fn new(text: impl Into<String>, url: impl Into<String>) -> Self {
-        Self {
-            text: text.into(),
-            url: url.into(),
-        }
+        Self { text: text.into(), url: url.into() }
     }
 }
 
@@ -278,9 +248,10 @@ impl FormatNode for Link {
                 offset,
                 length: len,
                 kind: MessageEntityKind::TextLink {
-                    url: self.url.parse().unwrap_or_else(|_| {
-                        url::Url::parse("https://example.com").unwrap()
-                    }),
+                    url: self
+                        .url
+                        .parse()
+                        .unwrap_or_else(|_| url::Url::parse("https://example.com").unwrap()),
                 },
             }],
         )
@@ -301,11 +272,7 @@ impl FormatNode for Blockquote {
         let len = utf16_len(&self.0);
         (
             self.0.clone(),
-            vec![MessageEntity {
-                offset,
-                length: len,
-                kind: MessageEntityKind::Blockquote,
-            }],
+            vec![MessageEntity { offset, length: len, kind: MessageEntityKind::Blockquote }],
         )
     }
 }

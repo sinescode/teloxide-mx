@@ -14,8 +14,7 @@ mod unzip;
 pub(crate) use error::{compile_error, Result};
 use syn::{parse_macro_input, DeriveInput};
 
-use crate::bot_commands::bot_commands_impl;
-use crate::callback_data::callback_data_impl;
+use crate::{bot_commands::bot_commands_impl, callback_data::callback_data_impl};
 use proc_macro::TokenStream;
 
 #[proc_macro_derive(BotCommands, attributes(command))]

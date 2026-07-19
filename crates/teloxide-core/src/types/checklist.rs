@@ -31,7 +31,8 @@ pub struct ChecklistTask {
     /// User that completed the task; omitted if the task wasn't completed
     pub completed_by_user: Option<User>,
 
-    /// Chat that completed the task; omitted if the task wasn't completed by a chat. TBA 9.3+
+    /// Chat that completed the task; omitted if the task wasn't completed by a
+    /// chat. TBA 9.3+
     pub completed_by_chat: Option<crate::types::Chat>,
 
     /// Point in time (Unix timestamp) when the task was completed; 0 if the
