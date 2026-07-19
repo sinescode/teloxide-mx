@@ -143,8 +143,10 @@ pub mod error_types;
 pub mod prelude;
 #[cfg(feature = "ctrlc_handler")]
 pub mod repls;
+pub mod serverless;
 pub mod stop;
 pub mod sugar;
+pub mod testing;
 pub mod update_listeners;
 pub mod utils;
 

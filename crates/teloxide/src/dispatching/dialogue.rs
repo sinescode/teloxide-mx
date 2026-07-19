@@ -212,6 +212,11 @@ where
     pub async fn exit(&self) -> Result<(), S::Error> {
         self.storage.clone().remove_dialogue(self.chat_id).await
     }
+
+    /// Returns a reference to the underlying storage.
+    pub fn storage(&self) -> &Arc<S> {
+        &self.storage
+    }
 }
 
 /// Enters a dialogue context.
@@ -266,4 +271,157 @@ where
             },
         }
     })
+}
+
+/// A separate data storage for dialogues, independent of state.
+///
+/// This allows storing key-value data alongside the dialogue state,
+/// similar to aiogram's `state.update_data()` / `state.get_data()`.
+///
+/// # Example
+///
+/// ```rust,no_run
+/// # use teloxide::prelude::*;
+/// # use teloxide::dispatching::dialogue::{DialogueData, InMemStorage, Dialogue};
+/// # type MyDialogue = Dialogue<State, InMemStorage<State>>;
+/// # type HandlerResult = Result<(), Box<dyn std::error::Error + Send + Sync>>;
+/// # #[derive(Clone, Default)]
+/// # enum State { #[default] Start, WaitForAge }
+///
+/// async fn receive_name(bot: Bot, dialogue: MyDialogue, mut data: DialogueData, msg: Message) -> HandlerResult {
+///     let name = msg.text().unwrap_or("").to_string();
+///     data.insert("name".to_string(), serde_json::Value::String(name.clone()));
+///     dialogue.update(State::WaitForAge).await?;
+///     bot.send_message(msg.chat.id, format!("Hello {name}! How old are you?")).await?;
+///     Ok(())
+/// }
+///
+/// async fn receive_age(bot: Bot, dialogue: MyDialogue, mut data: DialogueData, msg: Message) -> HandlerResult {
+///     let age = msg.text().unwrap_or("").to_string();
+///     let name = data.get("name")
+///         .and_then(|v| v.as_str().map(|s| s.to_string()))
+///         .unwrap_or_default();
+///     data.clear();
+///     dialogue.exit().await?;
+///     bot.send_message(msg.chat.id, format!("Name: {name}, Age: {age}")).await?;
+///     Ok(())
+/// }
+/// ```
+#[derive(Debug, Clone, Default)]
+pub struct DialogueData {
+    data: std::collections::HashMap<String, serde_json::Value>,
+}
+
+impl DialogueData {
+    /// Creates a new empty dialogue data.
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Inserts a key-value pair into the data.
+    pub fn insert(&mut self, key: String, value: serde_json::Value) {
+        self.data.insert(key, value);
+    }
+
+    /// Gets a value by key.
+    pub fn get(&self, key: &str) -> Option<&serde_json::Value> {
+        self.data.get(key)
+    }
+
+    /// Gets a mutable reference to a value by key.
+    pub fn get_mut(&mut self, key: &str) -> Option<&mut serde_json::Value> {
+        self.data.get_mut(key)
+    }
+
+    /// Removes a key-value pair from the data.
+    pub fn remove(&mut self, key: &str) -> Option<serde_json::Value> {
+        self.data.remove(key)
+    }
+
+    /// Returns true if the data contains the given key.
+    pub fn contains_key(&self, key: &str) -> bool {
+        self.data.contains_key(key)
+    }
+
+    /// Returns the number of key-value pairs.
+    pub fn len(&self) -> usize {
+        self.data.len()
+    }
+
+    /// Returns true if the data is empty.
+    pub fn is_empty(&self) -> bool {
+        self.data.is_empty()
+    }
+
+    /// Clears all key-value pairs.
+    pub fn clear(&mut self) {
+        self.data.clear();
+    }
+
+    /// Returns an iterator over the key-value pairs.
+    pub fn iter(&self) -> impl Iterator<Item = (&str, &serde_json::Value)> {
+        self.data.iter().map(|(k, v)| (k.as_str(), v))
+    }
+
+    /// Extends the data with another DialogueData.
+    pub fn extend(&mut self, other: DialogueData) {
+        self.data.extend(other.data);
+    }
+
+    /// Sets a string value.
+    pub fn set_string(&mut self, key: impl Into<String>, value: impl Into<String>) {
+        self.insert(key.into(), serde_json::Value::String(value.into()));
+    }
+
+    /// Gets a string value.
+    pub fn get_string(&self, key: &str) -> Option<String> {
+        self.get(key).and_then(|v| v.as_str().map(|s| s.to_string()))
+    }
+
+    /// Sets a numeric value.
+    pub fn set_number(&mut self, key: impl Into<String>, value: f64) {
+        self.insert(key.into(), serde_json::Value::Number(
+            serde_json::Number::from_f64(value).unwrap_or_default(),
+        ));
+    }
+
+    /// Gets a numeric value as f64.
+    pub fn get_number(&self, key: &str) -> Option<f64> {
+        self.get(key).and_then(|v| v.as_f64())
+    }
+
+    /// Sets a boolean value.
+    pub fn set_bool(&mut self, key: impl Into<String>, value: bool) {
+        self.insert(key.into(), serde_json::Value::Bool(value));
+    }
+
+    /// Gets a boolean value.
+    pub fn get_bool(&self, key: &str) -> Option<bool> {
+        self.get(key).and_then(|v| v.as_bool())
+    }
+
+    /// Serializes the data to JSON.
+    pub fn to_json(&self) -> Result<String, serde_json::Error> {
+        serde_json::to_string(&self.data)
+    }
+
+    /// Deserializes data from JSON.
+    pub fn from_json(json: &str) -> Result<Self, serde_json::Error> {
+        let data = serde_json::from_str(json)?;
+        Ok(Self { data })
+    }
+}
+
+impl std::ops::Index<&str> for DialogueData {
+    type Output = serde_json::Value;
+
+    fn index(&self, index: &str) -> &Self::Output {
+        self.data.get(index).unwrap_or(&serde_json::Value::Null)
+    }
+}
+
+impl std::ops::IndexMut<&str> for DialogueData {
+    fn index_mut(&mut self, index: &str) -> &mut Self::Output {
+        self.data.entry(index.to_string()).or_insert(serde_json::Value::Null)
+    }
 }

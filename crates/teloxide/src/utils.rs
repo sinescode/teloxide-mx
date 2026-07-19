@@ -10,6 +10,7 @@ pub mod formatting;
 pub mod html;
 pub mod i18n;
 pub mod keyboard;
+pub mod magic_filter;
 pub mod markdown;
 pub mod media_group;
 pub mod render;

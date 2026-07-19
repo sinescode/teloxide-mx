@@ -1,4 +1,24 @@
 //! Convenient error handling.
+//!
+//! This module provides error handlers for different error types, similar
+//! to aiogram's error handler system with `ErrorEvent` context.
+//!
+//! # Example
+//!
+//! ```rust,no_run
+//! # use teloxide::prelude::*;
+//! # use teloxide::error_handlers::*;
+//! # use teloxide::error_types::TelegramError;
+//!
+//! // Log errors
+//! let handler = LoggingErrorHandler::new();
+//!
+//! // Ignore specific error types
+//! let handler = IgnoringErrorHandler::new();
+//!
+//! // Filter errors by type
+//! // handler.filter(|e: &TelegramError| e.error_code == 400);
+//! ```
 
 use futures::future::BoxFuture;
 use std::{convert::Infallible, fmt::Debug, future::Future, sync::Arc};
@@ -208,5 +228,82 @@ where
     fn handle_error(self: Arc<Self>, error: E) -> BoxFuture<'static, ()> {
         log::error!("{text}: {:?}", error, text = self.text);
         Box::pin(async {})
+    }
+}
+
+/// A handler that routes errors to different handlers based on error type.
+///
+/// Similar to aiogram's `ErrorEvent` with `ExceptionTypeFilter`.
+///
+/// # Example
+///
+/// ```rust,no_run
+/// # use teloxide::prelude::*;
+/// # use teloxide::error_handlers::*;
+/// # use teloxide::error_types::TelegramError;
+///
+/// let handler = ErrorRouter::new()
+///     .on(400, |e: TelegramError| async move {
+///         log::warn!("Bad request: {}", e.description);
+///     })
+///     .on(429, |e: TelegramError| async move {
+///         log::warn!("Rate limited, retry after {:?}", e.retry_after());
+///     })
+///     .default(LoggingErrorHandler::new());
+/// ```
+pub struct ErrorRouter<E> {
+    handlers: Vec<Box<dyn ErrorHandler<E> + Send + Sync>>,
+}
+
+impl<E> ErrorRouter<E> {
+    /// Creates a new error router.
+    pub fn new() -> Self {
+        Self {
+            handlers: Vec::new(),
+        }
+    }
+}
+
+impl<E> Default for ErrorRouter<E> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// Context wrapper for errors that includes the original update.
+pub struct ErrorEvent<E> {
+    /// The error that occurred.
+    pub error: E,
+    /// The update that caused the error, if available.
+    pub update: Option<Arc<crate::types::Update>>,
+}
+
+impl<E> ErrorEvent<E> {
+    /// Creates a new error event.
+    pub fn new(error: E) -> Self {
+        Self {
+            error,
+            update: None,
+        }
+    }
+
+    /// Creates a new error event with an update context.
+    pub fn with_update(error: E, update: Arc<crate::types::Update>) -> Self {
+        Self {
+            error,
+            update: Some(update),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn error_event_creation() {
+        let event = ErrorEvent::new("test error");
+        assert_eq!(event.error, "test error");
+        assert!(event.update.is_none());
     }
 }

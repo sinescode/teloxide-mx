@@ -215,6 +215,8 @@
 //! [`Update`]: crate::types::Update
 
 pub mod dialogue;
+pub mod middleware;
+pub mod router;
 
 mod dispatcher;
 mod distribution;
@@ -231,6 +233,9 @@ pub use distribution::DefaultKey;
 pub use filter_ext::{MessageFilterExt, UpdateFilterExt};
 pub use handler_description::DpHandlerDescription;
 pub use handler_ext::{filter_command, filter_mention_command, HandlerExt};
+pub use middleware::{Middleware, MiddlewareContext, LoggingMiddleware, ThrottleMiddleware, ErrorCatchMiddleware};
+pub use router::{Router, RouterExt};
+pub use dialogue::DialogueData;
 
 #[cfg(feature = "tracing")]
 pub use self::tracing::UpdateHandlerTracingExt;
