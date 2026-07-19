@@ -1,0 +1,1 @@
+DELETE FROM teloxide_max_dialogues WHERE chat_id = $1
