@@ -139,6 +139,7 @@ pub use repls::{repl, repl_with_listener};
 pub mod backoff;
 pub mod dispatching;
 pub mod error_handlers;
+pub mod error_types;
 pub mod prelude;
 #[cfg(feature = "ctrlc_handler")]
 pub mod repls;
