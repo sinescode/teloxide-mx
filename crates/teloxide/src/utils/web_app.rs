@@ -34,9 +34,8 @@ pub fn validate_with_secret(secret_key: &[u8], init_data: &str) -> bool {
     let pairs: Vec<(&str, &str)> = init_data
         .split('&')
         .filter_map(|pair| {
-            let mut parts = pair.splitn(2, '=');
-            let key = parts.next()?;
-            let value = parts.next()?;
+            let (key, value) = pair.split_once('=')?;
+
             Some((key, value))
         })
         .collect();

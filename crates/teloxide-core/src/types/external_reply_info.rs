@@ -56,7 +56,7 @@ pub enum ExternalReplyInfoKind {
     Venue(Venue),
     Location(Location),
     Photo(Vec<PhotoSize>),
-    Poll(Poll),
+    Poll(Box<Poll>),
     Checklist(Checklist),
     Sticker(Sticker),
     Story(Story),

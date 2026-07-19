@@ -158,6 +158,7 @@ macro_rules! impl_payload {
             #[allow(clippy::redundant_field_names)]
             // It's obvious what this method does. (If you think it's not, feel free to open a PR)
             #[allow(missing_docs)]
+            #[allow(clippy::new_without_default)]
             $vi fn new($($($fields : impl_payload!(@convert? $FTy $([$conv])?)),*)?) -> Self {
                 Self {
                     $(

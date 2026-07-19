@@ -51,7 +51,7 @@ impl ChatActionSender {
         let task = tokio::spawn(async move {
             loop {
                 sleep(DEFAULT_INTERVAL).await;
-                if let Err(_) = bot.send_chat_action(chat_id, action.clone()).await {
+                if let Err(_) = bot.send_chat_action(chat_id, action).await {
                     break;
                 }
             }
@@ -74,7 +74,7 @@ impl ChatActionSender {
         let task = tokio::spawn(async move {
             loop {
                 sleep(interval).await;
-                if let Err(_) = bot.send_chat_action(chat_id, action.clone()).await {
+                if let Err(_) = bot.send_chat_action(chat_id, action).await {
                     break;
                 }
             }

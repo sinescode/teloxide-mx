@@ -72,7 +72,7 @@ impl MediaGroupBuilder {
     }
 
     /// Adds any [`InputMedia`] to the media group.
-    pub fn add(mut self, media: InputMedia) -> Self {
+    pub fn add_media(mut self, media: InputMedia) -> Self {
         self.media.push(media);
         self
     }

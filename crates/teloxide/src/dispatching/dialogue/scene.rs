@@ -135,7 +135,7 @@ pub trait Scene: Send + Sync + 'static {
 pub struct SceneContext<'a, S> {
     bot: &'a crate::Bot,
     chat_id: ChatId,
-    user_id: Option<UserId>,
+    _user_id: Option<UserId>,
     state: S,
     history: &'a mut Vec<SceneRecord>,
     scene_id: &'a str,
@@ -294,7 +294,7 @@ impl Default for SceneManager {
 pub fn route(manager: &SceneManager) -> UpdateHandler<Box<dyn std::error::Error + Send + Sync>> {
     let mut root = dptree::entry();
 
-    for (_scene_id, handler) in &manager.handlers {
+    for handler in manager.handlers.values() {
         root = root.branch(handler.clone());
     }
 
@@ -307,7 +307,7 @@ mod tests {
 
     #[test]
     fn scene_manager_register() {
-        let mut manager = SceneManager::new();
+        let manager = SceneManager::new();
         assert!(manager.scene_ids().is_empty());
 
         // We can't easily test with real Scene impl without async_trait,

@@ -12,20 +12,20 @@
 //! };
 //!
 //! // Simple filters
-//! let f = F::text; // Has text
-//! let f = F::text.contains("hello"); // Text contains "hello"
-//! let f = F::text.startswith("!"); // Text starts with "!"
-//! let f = F::text.regexp(r"^\d+$"); // Text is all digits
-//! let f = F::from_user.id(123); // From specific user
-//! let f = F::chat.is_private(); // In private chat
-//! let f = F::chat.is_group(); // In group chat
+//! let f = F::TEXT; // Has text
+//! let f = F::TEXT.contains("hello"); // Text contains "hello"
+//! let f = F::TEXT.startswith("!"); // Text starts with "!"
+//! let f = F::TEXT.regexp(r"^\d+$"); // Text is all digits
+//! let f = F::FROM_USER.id(123); // From specific user
+//! let f = F::CHAT.is_private(); // In private chat
+//! let f = F::CHAT.is_group(); // In group chat
 //! let f = F::has_photo; // Has photo
 //! let f = F::has_document; // Has document
 //!
 //! // Composed filters
-//! let f = F::text.contains("admin") & F::from_user.id(123);
-//! let f = F::text.startswith("!") | F::text.startswith("/");
-//! let f = !F::from_user.is_bot;
+//! let f = F::TEXT.contains("admin") & F::FROM_USER.id(123);
+//! let f = F::TEXT.startswith("!") | F::TEXT.startswith("/");
+//! let f = !F::FROM_USER.is_bot;
 //! ```
 
 use crate::types::{ChatId, ChatKind, Message, PublicChatKind, UserId};
@@ -35,16 +35,16 @@ pub struct F;
 
 impl F {
     /// Filter on message text.
-    pub const text: TextFilter = TextFilter;
+    pub const TEXT: TextFilter = TextFilter;
 
     /// Filter on the user who sent the message.
-    pub const from_user: UserFilter = UserFilter;
+    pub const FROM_USER: UserFilter = UserFilter;
 
     /// Filter on the chat.
-    pub const chat: ChatFilter = ChatFilter;
+    pub const CHAT: ChatFilter = ChatFilter;
 
     /// Filter on message length.
-    pub const len: LenFilter = LenFilter;
+    pub const LEN: LenFilter = LenFilter;
 }
 
 /// Filter that checks if message has text.
@@ -58,23 +58,23 @@ impl TextFilter {
 
     /// Checks if text contains a substring.
     pub fn contains(self, s: &'static str) -> ComposedFilter {
-        ComposedFilter::new(move |msg| msg.text().map_or(false, |t| t.contains(s)))
+        ComposedFilter::new(move |msg| msg.text().is_some_and(|t| t.contains(s)))
     }
 
     /// Checks if text starts with a prefix.
     pub fn startswith(self, s: &'static str) -> ComposedFilter {
-        ComposedFilter::new(move |msg| msg.text().map_or(false, |t| t.starts_with(s)))
+        ComposedFilter::new(move |msg| msg.text().is_some_and(|t| t.starts_with(s)))
     }
 
     /// Checks if text ends with a suffix.
     pub fn endswith(self, s: &'static str) -> ComposedFilter {
-        ComposedFilter::new(move |msg| msg.text().map_or(false, |t| t.ends_with(s)))
+        ComposedFilter::new(move |msg| msg.text().is_some_and(|t| t.ends_with(s)))
     }
 
     /// Checks if text matches a regex pattern.
     pub fn regexp(self, pattern: &'static str) -> ComposedFilter {
         ComposedFilter::new(move |msg| {
-            msg.text().map_or(false, |t| {
+            msg.text().is_some_and(|t| {
                 regex::Regex::new(pattern).map(|re| re.is_match(t)).unwrap_or(false)
             })
         })
@@ -83,7 +83,7 @@ impl TextFilter {
     /// Checks if text equals a value (case-insensitive).
     pub fn eq_ignore_case(self, s: &'static str) -> ComposedFilter {
         ComposedFilter::new(move |msg| {
-            msg.text().map_or(false, |t| t.to_lowercase() == s.to_lowercase())
+            msg.text().is_some_and(|t| t.to_lowercase() == s.to_lowercase())
         })
     }
 
@@ -94,12 +94,12 @@ impl TextFilter {
 
     /// Checks if text length is greater than n.
     pub fn len_gt(self, n: usize) -> ComposedFilter {
-        ComposedFilter::new(move |msg| msg.text().map_or(false, |t| t.len() > n))
+        ComposedFilter::new(move |msg| msg.text().is_some_and(|t| t.len() > n))
     }
 
     /// Checks if text length is less than n.
     pub fn len_lt(self, n: usize) -> ComposedFilter {
-        ComposedFilter::new(move |msg| msg.text().map_or(false, |t| t.len() < n))
+        ComposedFilter::new(move |msg| msg.text().is_some_and(|t| t.len() < n))
     }
 }
 
@@ -110,23 +110,23 @@ impl UserFilter {
     /// Checks if the user has a specific ID.
     pub fn id(self, user_id: u64) -> ComposedFilter {
         let uid = UserId(user_id);
-        ComposedFilter::new(move |msg| msg.from.as_ref().map_or(false, |u| u.id == uid))
+        ComposedFilter::new(move |msg| msg.from.as_ref().is_some_and(|u| u.id == uid))
     }
 
     /// Checks if the sender is a bot.
     pub fn is_bot(self) -> ComposedFilter {
-        ComposedFilter::new(|msg| msg.from.as_ref().map_or(false, |u| u.is_bot))
+        ComposedFilter::new(|msg| msg.from.as_ref().is_some_and(|u| u.is_bot))
     }
 
     /// Checks if the user is a premium user.
     pub fn is_premium(self) -> ComposedFilter {
-        ComposedFilter::new(|msg| msg.from.as_ref().map_or(false, |u| u.is_premium))
+        ComposedFilter::new(|msg| msg.from.as_ref().is_some_and(|u| u.is_premium))
     }
 
     /// Checks if the user has a specific username.
     pub fn username(self, name: &'static str) -> ComposedFilter {
         ComposedFilter::new(move |msg| {
-            msg.from.as_ref().map_or(false, |u| u.username.as_deref() == Some(name))
+            msg.from.as_ref().is_some_and(|u| u.username.as_deref() == Some(name))
         })
     }
 }
@@ -183,17 +183,17 @@ pub struct LenFilter;
 impl LenFilter {
     /// Checks if text length is greater than n.
     pub fn gt(self, n: usize) -> ComposedFilter {
-        ComposedFilter::new(move |msg| msg.text().map_or(false, |t| t.len() > n))
+        ComposedFilter::new(move |msg| msg.text().is_some_and(|t| t.len() > n))
     }
 
     /// Checks if text length is less than n.
     pub fn lt(self, n: usize) -> ComposedFilter {
-        ComposedFilter::new(move |msg| msg.text().map_or(false, |t| t.len() < n))
+        ComposedFilter::new(move |msg| msg.text().is_some_and(|t| t.len() < n))
     }
 
     /// Checks if text length equals n.
     pub fn eq(self, n: usize) -> ComposedFilter {
-        ComposedFilter::new(move |msg| msg.text().map_or(false, |t| t.len() == n))
+        ComposedFilter::new(move |msg| msg.text().is_some_and(|t| t.len() == n))
     }
 }
 
@@ -227,7 +227,7 @@ impl ComposedFilter {
     }
 
     /// Negates this filter.
-    pub fn not(self) -> ComposedFilter {
+    pub fn negate(self) -> ComposedFilter {
         ComposedFilter::new(move |msg| !(self.predicate)(msg))
     }
 }
@@ -255,7 +255,7 @@ impl std::ops::Not for ComposedFilter {
     type Output = Self;
 
     fn not(self) -> Self::Output {
-        self.not()
+        self.negate()
     }
 }
 
@@ -354,90 +354,90 @@ mod tests {
     #[test]
     fn text_filter() {
         let msg = make_message("hello world");
-        assert!(F::text.matches(&msg));
+        assert!(F::TEXT.matches(&msg));
     }
 
     #[test]
     fn text_contains() {
         let msg = make_message("hello world");
-        let filter = F::text.contains("world");
+        let filter = F::TEXT.contains("world");
         assert!(filter.matches(&msg));
 
-        let filter = F::text.contains("xyz");
+        let filter = F::TEXT.contains("xyz");
         assert!(!filter.matches(&msg));
     }
 
     #[test]
     fn text_startswith() {
         let msg = make_message("/start bot");
-        let filter = F::text.startswith("/");
+        let filter = F::TEXT.startswith("/");
         assert!(filter.matches(&msg));
     }
 
     #[test]
     fn text_eq() {
         let msg = make_message("hello");
-        let filter = F::text.eq("hello");
+        let filter = F::TEXT.eq("hello");
         assert!(filter.matches(&msg));
 
-        let filter = F::text.eq("world");
+        let filter = F::TEXT.eq("world");
         assert!(!filter.matches(&msg));
     }
 
     #[test]
     fn user_id_filter() {
         let msg = make_message("hi");
-        let filter = F::from_user.id(1);
+        let filter = F::FROM_USER.id(1);
         assert!(filter.matches(&msg));
 
-        let filter = F::from_user.id(999);
+        let filter = F::FROM_USER.id(999);
         assert!(!filter.matches(&msg));
     }
 
     #[test]
     fn chat_is_private() {
         let msg = make_message("hi");
-        let filter = F::chat.is_private();
+        let filter = F::CHAT.is_private();
         assert!(filter.matches(&msg));
     }
 
     #[test]
     fn and_filter() {
         let msg = make_message("hello");
-        let filter = F::text.contains("hello") & F::from_user.id(1);
+        let filter = F::TEXT.contains("hello") & F::FROM_USER.id(1);
         assert!(filter.matches(&msg));
 
-        let filter = F::text.contains("hello") & F::from_user.id(999);
+        let filter = F::TEXT.contains("hello") & F::FROM_USER.id(999);
         assert!(!filter.matches(&msg));
     }
 
     #[test]
     fn or_filter() {
         let msg = make_message("hello");
-        let filter = F::text.eq("hello") | F::text.eq("world");
+        let filter = F::TEXT.eq("hello") | F::TEXT.eq("world");
         assert!(filter.matches(&msg));
 
-        let filter = F::text.eq("xyz") | F::text.eq("world");
+        let filter = F::TEXT.eq("xyz") | F::TEXT.eq("world");
         assert!(!filter.matches(&msg));
     }
 
     #[test]
     fn not_filter() {
         let msg = make_message("hello");
-        let filter = !F::text.eq("hello");
+        let filter = !F::TEXT.eq("hello");
         assert!(!filter.matches(&msg));
 
-        let filter = !F::text.eq("world");
+        let filter = !F::TEXT.eq("world");
         assert!(filter.matches(&msg));
     }
 
     #[test]
     fn text_len_gt() {
         let msg = make_message("hello");
-        let filter = F::len.gt(3);
+        let filter = F::LEN.gt(3);
         assert!(filter.matches(&msg));
 
-        let filter = F::len.gt(10);
+        let filter = F::LEN.gt(10);
         assert!(!filter.matches(&msg));
     }
 }

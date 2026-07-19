@@ -18,9 +18,11 @@
 
 use crate::types::{ChatId, ChatKind, Message, Update, UpdateKind, UserId};
 
+type MessagePredicate = Box<dyn Fn(&Message) -> bool + Send + Sync>;
+
 /// A filter builder for ergonomic message matching.
 pub struct FilterBuilder {
-    conditions: Vec<Box<dyn Fn(&Message) -> bool + Send + Sync>>,
+    conditions: Vec<MessagePredicate>,
 }
 
 impl FilterBuilder {
@@ -38,28 +40,27 @@ impl FilterBuilder {
     /// Filters messages that start with the given prefix.
     pub fn startswith(mut self, prefix: &'static str) -> Self {
         self.conditions
-            .push(Box::new(move |msg| msg.text().map_or(false, |t| t.starts_with(prefix))));
+            .push(Box::new(move |msg| msg.text().is_some_and(|t| t.starts_with(prefix))));
         self
     }
 
     /// Filters messages that end with the given suffix.
     pub fn endswith(mut self, suffix: &'static str) -> Self {
-        self.conditions
-            .push(Box::new(move |msg| msg.text().map_or(false, |t| t.ends_with(suffix))));
+        self.conditions.push(Box::new(move |msg| msg.text().is_some_and(|t| t.ends_with(suffix))));
         self
     }
 
     /// Filters messages that contain the given substring.
     pub fn contains(mut self, substring: &'static str) -> Self {
         self.conditions
-            .push(Box::new(move |msg| msg.text().map_or(false, |t| t.contains(substring))));
+            .push(Box::new(move |msg| msg.text().is_some_and(|t| t.contains(substring))));
         self
     }
 
     /// Filters messages from a specific user.
     pub fn from_user(mut self, user_id: UserId) -> Self {
         self.conditions
-            .push(Box::new(move |msg| msg.from.as_ref().map_or(false, |u| u.id == user_id)));
+            .push(Box::new(move |msg| msg.from.as_ref().is_some_and(|u| u.id == user_id)));
         self
     }
 
@@ -143,7 +144,7 @@ impl FilterBuilder {
 
     /// Filters messages that are commands (start with /).
     pub fn is_command(mut self) -> Self {
-        self.conditions.push(Box::new(|msg| msg.text().map_or(false, |t| t.starts_with('/'))));
+        self.conditions.push(Box::new(|msg| msg.text().is_some_and(|t| t.starts_with('/'))));
         self
     }
 
@@ -204,9 +205,11 @@ pub fn message_filter() -> FilterBuilder {
     FilterBuilder::new()
 }
 
+type UpdatePredicate = Box<dyn Fn(&Update) -> bool + Send + Sync>;
+
 /// A filter for Update types.
 pub struct UpdateFilter {
-    conditions: Vec<Box<dyn Fn(&Update) -> bool + Send + Sync>>,
+    conditions: Vec<UpdatePredicate>,
 }
 
 impl UpdateFilter {
@@ -234,7 +237,7 @@ impl UpdateFilter {
 
     /// Filters updates from a specific user.
     pub fn from_user(mut self, user_id: UserId) -> Self {
-        self.conditions.push(Box::new(move |u| u.from().map_or(false, |f| f.id == user_id)));
+        self.conditions.push(Box::new(move |u| u.from().is_some_and(|f| f.id == user_id)));
         self
     }
 

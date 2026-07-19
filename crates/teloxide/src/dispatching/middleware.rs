@@ -7,7 +7,7 @@
 //!
 //! ```rust,no_run
 //! # use teloxide::prelude::*;
-//! # use teloxide::dispatching::middleware::{Middleware, MiddlewareContext};
+//! # use teloxide::dispatching::middleware::{Middleware, MiddlewareContext, NextFn, MiddlewareFuture};
 //! # type HandlerResult = Result<(), Box<dyn std::error::Error + Send + Sync>>;
 //!
 //! struct LoggingMiddleware;
@@ -16,8 +16,8 @@
 //!     fn handle<'a>(
 //!         &'a self,
 //!         ctx: MiddlewareContext,
-//!         next: std::sync::Arc<dyn Fn(DependencyMap) -> std::pin::Pin<Box<dyn std::future::Future<Output = DependencyMap> + Send>> + Send + Sync>,
-//!     ) -> std::pin::Pin<Box<dyn std::future::Future<Output = HandlerResult> + Send + 'a> {
+//!         next: NextFn,
+//!     ) -> MiddlewareFuture<'a> {
 //!         Box::pin(async move {
 //!             log::info!("Processing update");
 //!             let _deps = next(ctx.deps).await;
@@ -32,6 +32,11 @@ use crate::types::{CallbackQuery, InlineQuery, Message, Update, UpdateKind};
 use dptree::di::DependencyMap;
 use futures::FutureExt;
 use std::{future::Future, pin::Pin, sync::Arc};
+
+type NextFn =
+    Arc<dyn Fn(DependencyMap) -> Pin<Box<dyn Future<Output = DependencyMap> + Send>> + Send + Sync>;
+type MiddlewareFuture<'a> =
+    Pin<Box<dyn Future<Output = Result<(), Box<dyn std::error::Error + Send + Sync>>> + Send + 'a>>;
 
 /// Context passed to middleware during update processing.
 pub struct MiddlewareContext {
@@ -90,17 +95,7 @@ pub trait Middleware: Send + Sync + 'static {
     ///
     /// Call `next.dispatch(ctx.deps)` to continue to the next
     /// middleware/handler. Return early to stop the chain.
-    fn handle<'a>(
-        &'a self,
-        ctx: MiddlewareContext,
-        next: Arc<
-            dyn Fn(DependencyMap) -> Pin<Box<dyn Future<Output = DependencyMap> + Send>>
-                + Send
-                + Sync,
-        >,
-    ) -> Pin<
-        Box<dyn Future<Output = Result<(), Box<dyn std::error::Error + Send + Sync>>> + Send + 'a>,
-    >;
+    fn handle<'a>(&'a self, ctx: MiddlewareContext, next: NextFn) -> MiddlewareFuture<'a>;
 }
 
 /// A middleware that logs before and after handler execution.
@@ -115,22 +110,12 @@ impl LoggingMiddleware {
 }
 
 impl Middleware for LoggingMiddleware {
-    fn handle<'a>(
-        &'a self,
-        ctx: MiddlewareContext,
-        next: Arc<
-            dyn Fn(DependencyMap) -> Pin<Box<dyn Future<Output = DependencyMap> + Send>>
-                + Send
-                + Sync,
-        >,
-    ) -> Pin<
-        Box<dyn Future<Output = Result<(), Box<dyn std::error::Error + Send + Sync>>> + Send + 'a>,
-    > {
+    fn handle<'a>(&'a self, ctx: MiddlewareContext, next: NextFn) -> MiddlewareFuture<'a> {
         let label = self.label.clone();
         Box::pin(async move {
-            log::trace!("[{}] Before handler", label);
+            log::trace!("[{label}] Before handler");
             let _deps = next(ctx.deps).await;
-            log::trace!("[{}] After handler", label);
+            log::trace!("[{label}] After handler");
             Ok(())
         })
     }
@@ -148,17 +133,7 @@ impl ThrottleMiddleware {
 }
 
 impl Middleware for ThrottleMiddleware {
-    fn handle<'a>(
-        &'a self,
-        ctx: MiddlewareContext,
-        next: Arc<
-            dyn Fn(DependencyMap) -> Pin<Box<dyn Future<Output = DependencyMap> + Send>>
-                + Send
-                + Sync,
-        >,
-    ) -> Pin<
-        Box<dyn Future<Output = Result<(), Box<dyn std::error::Error + Send + Sync>>> + Send + 'a>,
-    > {
+    fn handle<'a>(&'a self, ctx: MiddlewareContext, next: NextFn) -> MiddlewareFuture<'a> {
         let interval = self.interval_ms;
         Box::pin(async move {
             tokio::time::sleep(std::time::Duration::from_millis(interval)).await;
@@ -177,17 +152,7 @@ impl Middleware for ThrottleMiddleware {
 pub struct ErrorCatchMiddleware;
 
 impl Middleware for ErrorCatchMiddleware {
-    fn handle<'a>(
-        &'a self,
-        ctx: MiddlewareContext,
-        next: Arc<
-            dyn Fn(DependencyMap) -> Pin<Box<dyn Future<Output = DependencyMap> + Send>>
-                + Send
-                + Sync,
-        >,
-    ) -> Pin<
-        Box<dyn Future<Output = Result<(), Box<dyn std::error::Error + Send + Sync>>> + Send + 'a>,
-    > {
+    fn handle<'a>(&'a self, ctx: MiddlewareContext, next: NextFn) -> MiddlewareFuture<'a> {
         Box::pin(async move {
             // Note: the next() call itself returns DependencyMap (not Result).
             // Errors from the handler chain surface as Err from handle().
@@ -202,7 +167,7 @@ impl Middleware for ErrorCatchMiddleware {
                     } else {
                         "handler panicked (unknown payload)".to_string()
                     };
-                    log::error!("ErrorCatchMiddleware caught panic: {}", msg);
+                    log::error!("ErrorCatchMiddleware caught panic: {msg}");
                     Ok(())
                 }
             }

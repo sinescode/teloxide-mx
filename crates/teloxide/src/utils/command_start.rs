@@ -63,13 +63,13 @@ impl CommandStart {
     /// ```
     pub fn parse(text: &str, bot_name: &str) -> Option<Self> {
         let text = text.strip_prefix('/')?;
-        
+
         // Split into command part and rest (split on first space)
         let (cmd_part, rest) = match text.split_once(char::is_whitespace) {
             Some((cmd, rest)) => (cmd, rest.trim()),
             None => (text, ""),
         };
-        
+
         // Split command part on @ to check bot name
         let (command, mentioned_bot) = match cmd_part.split_once('@') {
             Some((cmd, bot)) => (cmd, Some(bot)),

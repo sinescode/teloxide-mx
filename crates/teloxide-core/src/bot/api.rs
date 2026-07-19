@@ -5,13 +5,12 @@ use crate::{
     prelude::Requester,
     requests::{JsonRequest, MultipartRequest},
     types::{
-        AcceptedGiftTypes, BotAccessSettings, BotCommand, BusinessConnectionId, CallbackQueryId,
-        ChatId, ChatPermissions, CustomEmojiId, FileId, GiftId, GuestQueryId, InlineQueryId,
+        AcceptedGiftTypes, BotCommand, BusinessConnectionId, CallbackQueryId, ChatId,
+        ChatPermissions, CustomEmojiId, FileId, GiftId, GuestQueryId, InlineQueryId,
         InlineQueryResult, InputChecklist, InputFile, InputMedia, InputPaidMedia, InputPollOption,
         InputProfilePhoto, InputRichMessage, InputSticker, InputStoryContent, KeyboardButton,
-        LabeledPrice, MessageId, OwnedGiftId, PreCheckoutQueryId, PreparedKeyboardButton,
-        Recipient, Seconds, ShippingQueryId, StickerFormat, Story, StoryId, TelegramTransactionId,
-        ThreadId, UserId, UserProfileAudios, WebAppInfo,
+        LabeledPrice, MessageId, OwnedGiftId, PreCheckoutQueryId, Recipient, Seconds,
+        ShippingQueryId, StickerFormat, StoryId, TelegramTransactionId, ThreadId, UserId,
     },
     Bot,
 };

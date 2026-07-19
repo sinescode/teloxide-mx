@@ -40,7 +40,7 @@ use std::sync::{Arc, Mutex};
 #[derive(Clone)]
 pub struct MockBot {
     sent_messages: Arc<Mutex<Vec<SentMessage>>>,
-    token: String,
+    _token: String,
 }
 
 /// A record of a message sent by MockBot.
@@ -53,12 +53,12 @@ pub struct SentMessage {
 impl MockBot {
     /// Creates a new mock bot.
     pub fn new() -> Self {
-        Self { sent_messages: Arc::new(Mutex::new(Vec::new())), token: "TEST_TOKEN".to_string() }
+        Self { sent_messages: Arc::new(Mutex::new(Vec::new())), _token: "TEST_TOKEN".to_string() }
     }
 
     /// Creates a mock bot with a custom token.
     pub fn with_token(token: impl Into<String>) -> Self {
-        Self { sent_messages: Arc::new(Mutex::new(Vec::new())), token: token.into() }
+        Self { sent_messages: Arc::new(Mutex::new(Vec::new())), _token: token.into() }
     }
 
     /// Records a sent message.

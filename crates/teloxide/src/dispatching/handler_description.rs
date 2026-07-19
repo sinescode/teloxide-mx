@@ -193,7 +193,11 @@ mod tests {
                 | BusinessMessage
                 | BusinessConnection
                 | EditedBusinessMessage
-                | DeletedBusinessMessages => {
+                | DeletedBusinessMessages
+                | Subscription
+                | GuestMessage
+                | ManagedBotCreated
+                | ManagedBotUpdated => {
                     assert!(full_set.contains(&Kind(update)))
                 }
             }

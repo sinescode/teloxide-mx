@@ -49,7 +49,7 @@ pub struct FlagKey<T: Send + 'static> {
 
 impl<T: Send + 'static> Clone for FlagKey<T> {
     fn clone(&self) -> Self {
-        Self { id: self.id, _marker: std::marker::PhantomData }
+        *self
     }
 }
 
@@ -75,7 +75,7 @@ impl<T: Send + 'static> FlagKey<T> {
 
 /// Type-erased value stored in flags.
 struct ErasedValue {
-    type_id: TypeId,
+    _type_id: TypeId,
     value: Box<dyn Any + Send>,
 }
 
@@ -127,7 +127,10 @@ impl Flags {
         FLAGS.with(|flags| {
             let mut flags = flags.borrow_mut();
             let type_id = TypeId::of::<T>();
-            flags.insert((key.id, type_id), ErasedValue { type_id, value: Box::new(value) });
+            flags.insert(
+                (key.id, type_id),
+                ErasedValue { _type_id: type_id, value: Box::new(value) },
+            );
         });
     }
 
