@@ -14,6 +14,8 @@ pub use crate::utils::callback_answer::CallbackAnswer;
 pub use crate::utils::callback_data::{CallbackData, CallbackDataExt};
 pub use crate::utils::chat_action::ChatActionSender;
 pub use crate::utils::deep_linking;
+pub use crate::utils::filters::FilterBuilder;
+pub use crate::utils::i18n::{I18nContext, I18nLoader, Translation};
 pub use crate::utils::keyboard::{InlineKeyboardBuilder, ReplyKeyboardBuilder};
 pub use crate::utils::media_group::MediaGroupBuilder;
 
