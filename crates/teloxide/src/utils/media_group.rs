@@ -88,7 +88,66 @@ impl MediaGroupBuilder {
     }
 
     /// Builds the final list of [`InputMedia`].
-    pub fn build(self) -> Vec<InputMedia> {
+    ///
+    /// If a caption or caption_entities were set, they are applied to the first
+    /// media item in the group (as required by the Telegram API).
+    pub fn build(mut self) -> Vec<InputMedia> {
+        if let Some(first) = self.media.first_mut() {
+            use crate::types::InputMedia::*;
+
+            match first {
+                Photo(p) => {
+                    if self.caption.is_some() {
+                        p.caption = self.caption;
+                    }
+                    if self.caption_entities.is_some() {
+                        p.caption_entities = self.caption_entities;
+                    }
+                }
+                Video(v) => {
+                    if self.caption.is_some() {
+                        v.caption = self.caption;
+                    }
+                    if self.caption_entities.is_some() {
+                        v.caption_entities = self.caption_entities;
+                    }
+                }
+                Animation(a) => {
+                    if self.caption.is_some() {
+                        a.caption = self.caption;
+                    }
+                    if self.caption_entities.is_some() {
+                        a.caption_entities = self.caption_entities;
+                    }
+                }
+                Audio(a) => {
+                    if self.caption.is_some() {
+                        a.caption = self.caption;
+                    }
+                    if self.caption_entities.is_some() {
+                        a.caption_entities = self.caption_entities;
+                    }
+                }
+                Document(d) => {
+                    if self.caption.is_some() {
+                        d.caption = self.caption;
+                    }
+                    if self.caption_entities.is_some() {
+                        d.caption_entities = self.caption_entities;
+                    }
+                }
+                LivePhoto(lp) => {
+                    if self.caption.is_some() {
+                        lp.caption = self.caption;
+                    }
+                    if self.caption_entities.is_some() {
+                        lp.caption_entities = self.caption_entities;
+                    }
+                }
+                // Sticker, Location, Venue, Link don't have caption fields
+                Sticker(_) | Location(_) | Venue(_) | Link(_) => {}
+            }
+        }
         self.media
     }
 }

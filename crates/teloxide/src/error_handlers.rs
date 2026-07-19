@@ -21,7 +21,7 @@
 //! ```
 
 use futures::future::BoxFuture;
-use std::{convert::Infallible, fmt::Debug, future::Future, sync::Arc};
+use std::{collections::HashMap, convert::Infallible, fmt::Debug, future::Future, sync::Arc};
 
 /// An asynchronous handler of an error.
 ///
@@ -252,13 +252,56 @@ where
 ///     .default(LoggingErrorHandler::new());
 /// ```
 pub struct ErrorRouter<E> {
-    handlers: Vec<Box<dyn ErrorHandler<E> + Send + Sync>>,
+    code_handlers: HashMap<i64, Arc<dyn ErrorHandler<E> + Send + Sync>>,
+    default_handler: Option<Arc<dyn ErrorHandler<E> + Send + Sync>>,
 }
 
 impl<E> ErrorRouter<E> {
     /// Creates a new error router.
     pub fn new() -> Self {
-        Self { handlers: Vec::new() }
+        Self { code_handlers: HashMap::new(), default_handler: None }
+    }
+
+    /// Registers a handler for a specific Telegram error code.
+    ///
+    /// When an error with a matching `error_code` is routed, this handler
+    /// will be invoked instead of the default.
+    pub fn on(
+        mut self,
+        error_code: i64,
+        handler: impl ErrorHandler<E> + Send + Sync + 'static,
+    ) -> Self {
+        self.code_handlers.insert(error_code, Arc::new(handler));
+        self
+    }
+
+    /// Sets the default fallback handler, used when no specific error code
+    /// handler matches.
+    pub fn default(mut self, handler: impl ErrorHandler<E> + Send + Sync + 'static) -> Self {
+        self.default_handler = Some(Arc::new(handler));
+        self
+    }
+
+    /// Returns the router ready for use.
+    pub fn build(self) -> Self {
+        self
+    }
+
+    /// Routes an error to the appropriate handler by error code.
+    ///
+    /// Looks up the error code in registered handlers; falls back to the
+    /// default handler if no match is found.
+    pub async fn route(&self, error_code: i64, error: E)
+    where
+        E: Send + 'static,
+    {
+        if let Some(handler) = self.code_handlers.get(&error_code) {
+            let handler = Arc::clone(handler);
+            handler.handle_error(error).await;
+        } else if let Some(handler) = &self.default_handler {
+            let handler = Arc::clone(handler);
+            handler.handle_error(error).await;
+        }
     }
 }
 

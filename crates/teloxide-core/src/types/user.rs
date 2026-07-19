@@ -46,6 +46,57 @@ pub struct User {
     /// TBA 9.4+
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub allows_users_to_create_topics: bool,
+
+    /// `true`, if this user can join groups. Returned only in [`GetMe`].
+    ///
+    /// [`GetMe`]: crate::payloads::GetMe
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub can_join_groups: Option<bool>,
+
+    /// `true`, if privacy mode is disabled for the bot. Returned only in
+    /// [`GetMe`].
+    ///
+    /// [`GetMe`]: crate::payloads::GetMe
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub can_read_all_group_messages: Option<bool>,
+
+    /// `true`, if the bot supports guest queries. Returned only in [`GetMe`].
+    ///
+    /// [`GetMe`]: crate::payloads::GetMe
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub supports_guest_queries: Option<bool>,
+
+    /// `true`, if the bot supports inline queries. Returned only in [`GetMe`].
+    ///
+    /// [`GetMe`]: crate::payloads::GetMe
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub supports_inline_queries: Option<bool>,
+
+    /// `true`, if the bot can connect to business accounts. Returned only in
+    /// [`GetMe`].
+    ///
+    /// [`GetMe`]: crate::payloads::GetMe
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub can_connect_to_business: Option<bool>,
+
+    /// `true`, if the user has a main Web App. Returned only in [`GetMe`].
+    ///
+    /// [`GetMe`]: crate::payloads::GetMe
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub has_main_web_app: Option<bool>,
+
+    /// `true`, if the user can manage bots. Returned only in [`GetMe`].
+    ///
+    /// [`GetMe`]: crate::payloads::GetMe
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub can_manage_bots: Option<bool>,
+
+    /// `true`, if the user supports join request queries. Returned only in
+    /// [`GetMe`].
+    ///
+    /// [`GetMe`]: crate::payloads::GetMe
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub supports_join_request_queries: Option<bool>,
 }
 
 impl User {
@@ -164,6 +215,14 @@ mod tests {
             added_to_attachment_menu: false,
             has_topics_enabled: false,
             allows_users_to_create_topics: false,
+            can_join_groups: None,
+            can_read_all_group_messages: None,
+            supports_guest_queries: None,
+            supports_inline_queries: None,
+            can_connect_to_business: None,
+            has_main_web_app: None,
+            can_manage_bots: None,
+            supports_join_request_queries: None,
         };
         let actual = serde_json::from_str::<User>(json).unwrap();
         assert_eq!(actual, expected)
@@ -182,6 +241,14 @@ mod tests {
             added_to_attachment_menu: false,
             has_topics_enabled: false,
             allows_users_to_create_topics: false,
+            can_join_groups: None,
+            can_read_all_group_messages: None,
+            supports_guest_queries: None,
+            supports_inline_queries: None,
+            can_connect_to_business: None,
+            has_main_web_app: None,
+            can_manage_bots: None,
+            supports_join_request_queries: None,
         };
 
         let user_b = User {
@@ -195,6 +262,14 @@ mod tests {
             added_to_attachment_menu: false,
             has_topics_enabled: false,
             allows_users_to_create_topics: false,
+            can_join_groups: None,
+            can_read_all_group_messages: None,
+            supports_guest_queries: None,
+            supports_inline_queries: None,
+            can_connect_to_business: None,
+            has_main_web_app: None,
+            can_manage_bots: None,
+            supports_join_request_queries: None,
         };
 
         assert_eq!(user_a.full_name(), "First Last");

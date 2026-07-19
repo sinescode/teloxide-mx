@@ -18,6 +18,10 @@ pub enum InputMedia {
     Audio(InputMediaAudio),
     Document(InputMediaDocument),
     LivePhoto(crate::types::InputMediaLivePhoto),
+    Sticker(InputMediaSticker),
+    Location(InputMediaLocation),
+    Venue(InputMediaVenue),
+    Link(InputMediaLink),
 }
 
 /// Represents a photo to be sent.
@@ -582,6 +586,167 @@ impl InputMediaDocument {
     }
 }
 
+/// Represents a sticker to be sent.
+///
+/// [The official docs](https://core.telegram.org/bots/api#inputmediasticker).
+#[serde_with::skip_serializing_none]
+#[derive(Clone, Debug, Serialize)]
+#[cfg_attr(test, derive(schemars::JsonSchema))]
+pub struct InputMediaSticker {
+    /// File to send.
+    pub media: InputFile,
+
+    /// UTF-8 text of the emoji.
+    pub emoji: Option<String>,
+}
+
+impl InputMediaSticker {
+    pub const fn new(media: InputFile) -> Self {
+        Self { media, emoji: None }
+    }
+
+    pub fn media(mut self, val: InputFile) -> Self {
+        self.media = val;
+        self
+    }
+
+    pub fn emoji<S>(mut self, val: S) -> Self
+    where
+        S: Into<String>,
+    {
+        self.emoji = Some(val.into());
+        self
+    }
+}
+
+/// Represents a location to be sent.
+///
+/// [The official docs](https://core.telegram.org/bots/api#inputmedialocation).
+#[serde_with::skip_serializing_none]
+#[derive(Clone, Debug, Serialize)]
+#[cfg_attr(test, derive(schemars::JsonSchema))]
+pub struct InputMediaLocation {
+    /// Latitude of the location.
+    pub latitude: f64,
+
+    /// Longitude of the location.
+    pub longitude: f64,
+
+    /// The radius of uncertainty for the location, measured in meters; 0-1500.
+    pub horizontal_accuracy: Option<f64>,
+}
+
+impl InputMediaLocation {
+    pub const fn new(latitude: f64, longitude: f64) -> Self {
+        Self { latitude, longitude, horizontal_accuracy: None }
+    }
+
+    pub const fn horizontal_accuracy(mut self, val: f64) -> Self {
+        self.horizontal_accuracy = Some(val);
+        self
+    }
+}
+
+/// Represents a venue to be sent.
+///
+/// [The official docs](https://core.telegram.org/bots/api#inputmediavenue).
+#[serde_with::skip_serializing_none]
+#[derive(Clone, Debug, Serialize)]
+#[cfg_attr(test, derive(schemars::JsonSchema))]
+pub struct InputMediaVenue {
+    /// Latitude of the venue.
+    pub latitude: f64,
+
+    /// Longitude of the venue.
+    pub longitude: f64,
+
+    /// Name of the venue.
+    pub title: String,
+
+    /// Address of the venue.
+    pub address: String,
+
+    /// Foursquare identifier of the venue.
+    pub foursquare_id: Option<String>,
+
+    /// Foursquare type of the venue.
+    pub foursquare_type: Option<String>,
+
+    /// Google Places identifier of the venue.
+    pub google_place_id: Option<String>,
+
+    /// Google Places type of the venue.
+    pub google_place_type: Option<String>,
+}
+
+impl InputMediaVenue {
+    pub fn new(
+        latitude: f64,
+        longitude: f64,
+        title: impl Into<String>,
+        address: impl Into<String>,
+    ) -> Self {
+        Self {
+            latitude,
+            longitude,
+            title: title.into(),
+            address: address.into(),
+            foursquare_id: None,
+            foursquare_type: None,
+            google_place_id: None,
+            google_place_type: None,
+        }
+    }
+
+    pub fn foursquare_id<S>(mut self, val: S) -> Self
+    where
+        S: Into<String>,
+    {
+        self.foursquare_id = Some(val.into());
+        self
+    }
+
+    pub fn foursquare_type<S>(mut self, val: S) -> Self
+    where
+        S: Into<String>,
+    {
+        self.foursquare_type = Some(val.into());
+        self
+    }
+
+    pub fn google_place_id<S>(mut self, val: S) -> Self
+    where
+        S: Into<String>,
+    {
+        self.google_place_id = Some(val.into());
+        self
+    }
+
+    pub fn google_place_type<S>(mut self, val: S) -> Self
+    where
+        S: Into<String>,
+    {
+        self.google_place_type = Some(val.into());
+        self
+    }
+}
+
+/// Represents a link to be sent.
+///
+/// [The official docs](https://core.telegram.org/bots/api#inputmedialink).
+#[derive(Clone, Debug, Serialize)]
+#[cfg_attr(test, derive(schemars::JsonSchema))]
+pub struct InputMediaLink {
+    /// The URL of the link.
+    pub url: String,
+}
+
+impl InputMediaLink {
+    pub fn new(url: impl Into<String>) -> Self {
+        Self { url: url.into() }
+    }
+}
+
 impl From<InputMedia> for InputFile {
     fn from(media: InputMedia) -> InputFile {
         match media {
@@ -590,7 +755,11 @@ impl From<InputMedia> for InputFile {
             | InputMedia::Audio(InputMediaAudio { media, .. })
             | InputMedia::Animation(InputMediaAnimation { media, .. })
             | InputMedia::Video(InputMediaVideo { media, .. })
-            | InputMedia::LivePhoto(crate::types::InputMediaLivePhoto { media, .. }) => media,
+            | InputMedia::LivePhoto(crate::types::InputMediaLivePhoto { media, .. })
+            | InputMedia::Sticker(InputMediaSticker { media, .. }) => media,
+            InputMedia::Location(_) | InputMedia::Venue(_) | InputMedia::Link(_) => {
+                unreachable!("InputMedia::Location, Venue, and Link do not contain an InputFile")
+            }
         }
     }
 }
@@ -607,6 +776,8 @@ impl InputMedia {
             | Animation(InputMediaAnimation { media, thumbnail, .. })
             | Video(InputMediaVideo { media, thumbnail, .. }) => (media, thumbnail.as_ref(), None),
             LivePhoto(m) => (&m.media, None, m.photo.as_ref()),
+            Sticker(InputMediaSticker { media, .. }) => (media, None, None),
+            Location(_) | Venue(_) | Link(_) => unreachable!(),
         };
 
         iter::once(media).chain(thumbnail).chain(photo)
@@ -623,6 +794,8 @@ impl InputMedia {
             | Animation(InputMediaAnimation { media, thumbnail, .. })
             | Video(InputMediaVideo { media, thumbnail, .. }) => (media, thumbnail.as_mut(), None),
             LivePhoto(m) => (&mut m.media, None, m.photo.as_mut()),
+            Sticker(InputMediaSticker { media, .. }) => (media, None, None),
+            Location(_) | Venue(_) | Link(_) => unreachable!(),
         };
 
         iter::once(media).chain(thumbnail).chain(photo)

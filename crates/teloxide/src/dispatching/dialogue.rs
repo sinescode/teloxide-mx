@@ -112,7 +112,7 @@ pub use strategy::{
     StrategyStorage, UserInChatStrategy, UserInTopicStrategy,
 };
 
-pub use scene::{Scene, SceneContext, SceneId, SceneManager, SceneRecord};
+pub use scene::{route, Scene, SceneContext, SceneId, SceneManager, SceneRecord};
 
 use dptree::Handler;
 use teloxide_core::types::ChatId;

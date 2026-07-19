@@ -64,6 +64,7 @@
 use std::{collections::HashMap, sync::Arc};
 
 use crate::{
+    dispatching::UpdateHandler,
     requests::Requester,
     types::{ChatId, Message, UserId},
 };
@@ -213,13 +214,14 @@ impl<'a, S: Clone + Default + serde::Serialize + for<'de> serde::Deserialize<'de
 /// Manages scenes and their lifecycle.
 pub struct SceneManager {
     scenes: HashMap<String, Arc<dyn std::any::Any + Send + Sync>>,
+    handlers: HashMap<String, UpdateHandler<Box<dyn std::error::Error + Send + Sync>>>,
     history: Vec<SceneRecord>,
 }
 
 impl SceneManager {
     /// Creates a new empty scene manager.
     pub fn new() -> Self {
-        Self { scenes: HashMap::new(), history: Vec::new() }
+        Self { scenes: HashMap::new(), handlers: HashMap::new(), history: Vec::new() }
     }
 
     /// Registers a scene.
@@ -228,9 +230,29 @@ impl SceneManager {
         self.scenes.insert(id, Arc::new(scene));
     }
 
+    /// Registers a handler for a scene by its ID.
+    pub fn register_handler(
+        &mut self,
+        scene_id: impl Into<String>,
+        handler: UpdateHandler<Box<dyn std::error::Error + Send + Sync>>,
+    ) {
+        self.handlers.insert(scene_id.into(), handler);
+    }
+
     /// Returns the list of registered scene IDs.
     pub fn scene_ids(&self) -> Vec<&str> {
         self.scenes.keys().map(|s| s.as_str()).collect()
+    }
+
+    /// Dispatches to the handler for the given scene ID.
+    ///
+    /// Returns `Some(handler)` if a handler is registered for `scene_id`,
+    /// `None` otherwise.
+    pub fn dispatch(
+        &self,
+        scene_id: &str,
+    ) -> Option<&UpdateHandler<Box<dyn std::error::Error + Send + Sync>>> {
+        self.handlers.get(scene_id)
     }
 
     /// Returns the current history depth.
@@ -248,6 +270,35 @@ impl Default for SceneManager {
     fn default() -> Self {
         Self::new()
     }
+}
+
+/// Creates a handler tree from registered scenes.
+///
+/// The returned handler branches on each registered scene handler. When an
+/// update arrives, the handler tree dispatches to the matching scene handler
+/// based on the scene ID extracted from the dialogue state.
+///
+/// # Example
+///
+/// ```rust,no_run
+/// # use teloxide::prelude::*;
+/// # use teloxide::dispatching::dialogue::{InMemStorage, Dialogue};
+/// # use teloxide::dispatching::dialogue::scene::{Scene, SceneManager, route};
+/// # type HandlerResult = Result<(), Box<dyn std::error::Error + Send + Sync>>;
+///
+/// let mut manager = SceneManager::new();
+/// // register scenes and their handlers ...
+///
+/// let scene_handler = route(&manager);
+/// ```
+pub fn route(manager: &SceneManager) -> UpdateHandler<Box<dyn std::error::Error + Send + Sync>> {
+    let mut root = dptree::entry();
+
+    for (_scene_id, handler) in &manager.handlers {
+        root = root.branch(handler.clone());
+    }
+
+    root
 }
 
 #[cfg(test)]

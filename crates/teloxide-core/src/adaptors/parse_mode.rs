@@ -555,6 +555,7 @@ fn visit_parse_modes_in_input_media(
         Audio(m) => &mut m.parse_mode,
         Document(m) => &mut m.parse_mode,
         LivePhoto(m) => &mut m.parse_mode,
+        Sticker(_) | Location(_) | Venue(_) | Link(_) => return,
     };
 
     visitor(parse_mode);

@@ -253,6 +253,18 @@ where
             Ok(self.map.lock().await.get(&key).cloned())
         })
     }
+
+    fn get_dialogue_with_context(
+        self: Arc<Self>,
+        chat_id: ChatId,
+        user_id: Option<UserId>,
+        thread_id: Option<ThreadId>,
+    ) -> BoxFuture<'static, Result<Option<D>, Self::Error>> {
+        Box::pin(async move {
+            let key = S::extract_key(chat_id, user_id, thread_id);
+            Ok(self.map.lock().await.get(&key).cloned())
+        })
+    }
 }
 
 /// Error type for [`StrategyStorage`].

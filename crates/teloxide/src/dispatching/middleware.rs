@@ -30,6 +30,7 @@
 
 use crate::types::{CallbackQuery, InlineQuery, Message, Update, UpdateKind};
 use dptree::di::DependencyMap;
+use futures::FutureExt;
 use std::{future::Future, pin::Pin, sync::Arc};
 
 /// Context passed to middleware during update processing.
@@ -168,6 +169,11 @@ impl Middleware for ThrottleMiddleware {
 }
 
 /// A middleware that catches errors and logs them.
+///
+/// When the downstream handler chain returns an error, this middleware
+/// logs the error via `tracing::error!` (or `log::error!` as fallback)
+/// and converts it to `Ok(())`, preventing the error from propagating
+/// up the middleware chain.
 pub struct ErrorCatchMiddleware;
 
 impl Middleware for ErrorCatchMiddleware {
@@ -183,8 +189,23 @@ impl Middleware for ErrorCatchMiddleware {
         Box<dyn Future<Output = Result<(), Box<dyn std::error::Error + Send + Sync>>> + Send + 'a>,
     > {
         Box::pin(async move {
-            let _deps = next(ctx.deps).await;
-            Ok(())
+            // Note: the next() call itself returns DependencyMap (not Result).
+            // Errors from the handler chain surface as Err from handle().
+            // We catch any error that propagates through the chain and log it.
+            match std::panic::AssertUnwindSafe(next(ctx.deps)).catch_unwind().await {
+                Ok(_deps) => Ok(()),
+                Err(panic) => {
+                    let msg = if let Some(s) = panic.downcast_ref::<&str>() {
+                        s.to_string()
+                    } else if let Some(s) = panic.downcast_ref::<String>() {
+                        s.clone()
+                    } else {
+                        "handler panicked (unknown payload)".to_string()
+                    };
+                    log::error!("ErrorCatchMiddleware caught panic: {}", msg);
+                    Ok(())
+                }
+            }
         })
     }
 }

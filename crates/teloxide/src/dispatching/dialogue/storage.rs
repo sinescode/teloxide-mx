@@ -13,7 +13,7 @@ mod sqlite_storage;
 mod postgres_storage;
 
 use futures::future::BoxFuture;
-use teloxide_core::types::ChatId;
+use teloxide_core::types::{ChatId, ThreadId, UserId};
 
 pub use self::{
     in_mem_storage::{InMemStorage, InMemStorageError},
@@ -84,6 +84,23 @@ pub trait Storage<D> {
         chat_id: ChatId,
     ) -> BoxFuture<'static, Result<Option<D>, Self::Error>>;
 
+    /// Returns the dialogue indexed by `chat_id` with additional context.
+    ///
+    /// This method allows storage implementations that support per-user or
+    /// per-topic scoping to use the `user_id` and `thread_id` when looking up
+    /// dialogues. The default implementation ignores the context and delegates
+    /// to [`get_dialogue`](Storage::get_dialogue).
+    #[must_use = "Futures are lazy and do nothing unless polled with .await"]
+    fn get_dialogue_with_context(
+        self: Arc<Self>,
+        chat_id: ChatId,
+        user_id: Option<UserId>,
+        thread_id: Option<ThreadId>,
+    ) -> BoxFuture<'static, Result<Option<D>, Self::Error>> {
+        let _ = (user_id, thread_id);
+        self.get_dialogue(chat_id)
+    }
+
     /// Erases [`Self::Error`] to [`std::error::Error`].
     #[must_use]
     fn erase(self: Arc<Self>) -> Arc<ErasedStorage<D>>
@@ -136,6 +153,20 @@ where
         Box::pin(
             async move { Arc::clone(&self.0).get_dialogue(chat_id).await.map_err(|e| e.into()) },
         )
+    }
+
+    fn get_dialogue_with_context(
+        self: Arc<Self>,
+        chat_id: ChatId,
+        user_id: Option<UserId>,
+        thread_id: Option<ThreadId>,
+    ) -> BoxFuture<'static, Result<Option<D>, Self::Error>> {
+        Box::pin(async move {
+            Arc::clone(&self.0)
+                .get_dialogue_with_context(chat_id, user_id, thread_id)
+                .await
+                .map_err(|e| e.into())
+        })
     }
 }
 

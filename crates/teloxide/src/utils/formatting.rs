@@ -61,9 +61,78 @@ impl Text {
     }
 
     /// Creates a `Text` from existing text and entities.
-    pub fn from_entities(text: &str, _entities: &[MessageEntity]) -> Self {
-        // Reconstruct the tree from entities (simplified: just return raw text)
-        Self::raw(text)
+    ///
+    /// Overlapping entities are nested properly in the resulting tree.
+    pub fn from_entities(text: &str, entities: &[MessageEntity]) -> Self {
+        if entities.is_empty() {
+            return Self::raw(text);
+        }
+
+        let text_len = text.len();
+
+        // Filter out zero-length or out-of-bounds entities
+        let valid: Vec<&MessageEntity> =
+            entities.iter().filter(|e| e.length > 0 && e.offset < text_len).collect();
+
+        if valid.is_empty() {
+            return Self::raw(text);
+        }
+
+        // Sort by offset, then by descending length (outermost first)
+        let mut sorted = valid;
+        sorted.sort_by(|a, b| a.offset.cmp(&b.offset).then_with(|| b.length.cmp(&a.length)));
+
+        // Build events: (position, is_start, index_into_sorted)
+        let mut events: Vec<(usize, bool, usize)> = Vec::new();
+        for (i, e) in sorted.iter().enumerate() {
+            let end = (e.offset + e.length).min(text_len);
+            events.push((e.offset, true, i));
+            events.push((end, false, i));
+        }
+        // At same position: ends before starts
+        events.sort_by(|a, b| {
+            a.0.cmp(&b.0).then_with(|| match (a.1, b.1) {
+                (false, true) => std::cmp::Ordering::Less,
+                (true, false) => std::cmp::Ordering::Greater,
+                _ => std::cmp::Ordering::Equal,
+            })
+        });
+
+        let mut children: Vec<Box<dyn FormatNode>> = Vec::new();
+        let mut active: Vec<usize> = Vec::new();
+        let mut last_pos = 0;
+        let mut i = 0;
+
+        while i < events.len() {
+            let pos = events[i].0;
+
+            // Emit text segment from last_pos to pos
+            if pos > last_pos && last_pos < text_len {
+                let end = pos.min(text_len);
+                let segment = &text[last_pos..end];
+                children.push(build_nested_node(segment, &active, &sorted));
+            }
+
+            // Process all events at this position
+            while i < events.len() && events[i].0 == pos {
+                let (_, is_start, idx) = events[i];
+                if is_start {
+                    active.push(idx);
+                } else {
+                    active.retain(|&j| j != idx);
+                }
+                i += 1;
+            }
+
+            last_pos = pos;
+        }
+
+        // Emit remaining text
+        if last_pos < text_len {
+            children.push(Box::new(RawText(text[last_pos..].to_string())));
+        }
+
+        Self::new(children)
     }
 }
 
@@ -86,6 +155,46 @@ impl FormatNode for RawText {
     fn render(&self, _offset: usize) -> (String, Vec<MessageEntity>) {
         (self.0.clone(), vec![])
     }
+}
+
+/// A node that wraps text with a single entity kind, containing an optional
+/// inner node. Used for nesting overlapping entities from `from_entities`.
+struct NestedFormat {
+    text: String,
+    kind: MessageEntityKind,
+    inner: Box<dyn FormatNode>,
+}
+
+impl FormatNode for NestedFormat {
+    fn render(&self, offset: usize) -> (String, Vec<MessageEntity>) {
+        let (_inner_text, mut inner_entities) = self.inner.render(offset);
+        let len = utf16_len(&self.text);
+        inner_entities.push(MessageEntity { offset, length: len, kind: self.kind.clone() });
+        (self.text.clone(), inner_entities)
+    }
+}
+
+/// Builds a nested node tree from a text segment and the active entity indices.
+fn build_nested_node(
+    text: &str,
+    active: &[usize],
+    sorted: &[&MessageEntity],
+) -> Box<dyn FormatNode> {
+    if active.is_empty() {
+        return Box::new(RawText(text.to_string()));
+    }
+
+    // active[0] is outermost (started first), active[last] is innermost.
+    // Wrap from innermost to outermost.
+    let mut node: Box<dyn FormatNode> = Box::new(RawText(text.to_string()));
+    for &idx in active.iter().rev() {
+        node = Box::new(NestedFormat {
+            text: text.to_string(),
+            kind: sorted[idx].kind.clone(),
+            inner: node,
+        });
+    }
+    node
 }
 
 /// Bold text wrapper.
@@ -315,5 +424,61 @@ mod tests {
         let (s, entities) = text.render(0);
         assert_eq!(s, "👋");
         assert_eq!(entities[0].length, 2); // emoji is 2 UTF-16 units
+    }
+
+    #[test]
+    fn from_entities_single_bold() {
+        let text = "Hello World";
+        let entities = vec![MessageEntity::bold(0, 5)];
+        let t = Text::from_entities(text, &entities);
+        let (rendered, ents) = t.render();
+        assert_eq!(rendered, "Hello World");
+        assert_eq!(ents.len(), 1);
+        assert_eq!(ents[0].kind, MessageEntityKind::Bold);
+        assert_eq!(ents[0].offset, 0);
+        assert_eq!(ents[0].length, 5);
+    }
+
+    #[test]
+    fn from_entities_non_overlapping() {
+        let text = "Hello World";
+        let entities = vec![MessageEntity::bold(0, 5), MessageEntity::italic(6, 5)];
+        let t = Text::from_entities(text, &entities);
+        let (rendered, ents) = t.render();
+        assert_eq!(rendered, "Hello World");
+        assert_eq!(ents.len(), 2);
+        assert_eq!(ents[0].kind, MessageEntityKind::Bold);
+        assert_eq!(ents[1].kind, MessageEntityKind::Italic);
+    }
+
+    #[test]
+    fn from_entities_overlapping() {
+        let text = "Hello World";
+        // Bold covers [0,10), Italic covers [3,8)
+        let entities = vec![MessageEntity::bold(0, 10), MessageEntity::italic(3, 5)];
+        let t = Text::from_entities(text, &entities);
+        let (rendered, ents) = t.render();
+        assert_eq!(rendered, "Hello World");
+        // Should have entities for: Bold [0,3), Bold+Italic [3,8), Bold [8,10)
+        assert!(ents.iter().any(|e| e.kind == MessageEntityKind::Italic));
+        assert!(ents.iter().filter(|e| e.kind == MessageEntityKind::Bold).count() >= 2);
+    }
+
+    #[test]
+    fn from_entities_same_range() {
+        let text = "Hello";
+        let entities = vec![MessageEntity::bold(0, 5), MessageEntity::italic(0, 5)];
+        let t = Text::from_entities(text, &entities);
+        let (rendered, ents) = t.render();
+        assert_eq!(rendered, "Hello");
+        assert_eq!(ents.len(), 2);
+    }
+
+    #[test]
+    fn from_entities_empty() {
+        let t = Text::from_entities("Hello", &[]);
+        let (rendered, ents) = t.render();
+        assert_eq!(rendered, "Hello");
+        assert!(ents.is_empty());
     }
 }

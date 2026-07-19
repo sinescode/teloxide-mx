@@ -308,6 +308,14 @@ mod tests {
             added_to_attachment_menu: false,
             has_topics_enabled: false,
             allows_users_to_create_topics: false,
+            can_join_groups: None,
+            can_read_all_group_messages: None,
+            supports_guest_queries: None,
+            supports_inline_queries: None,
+            can_connect_to_business: None,
+            has_main_web_app: None,
+            can_manage_bots: None,
+            supports_join_request_queries: None,
         };
         assert_eq!(user_mention_or_link(&user_with_username), "@abcd");
         // Telegram allows underscores in usernames
@@ -326,6 +334,14 @@ mod tests {
             added_to_attachment_menu: false,
             has_topics_enabled: false,
             allows_users_to_create_topics: false,
+            can_join_groups: None,
+            can_read_all_group_messages: None,
+            supports_guest_queries: None,
+            supports_inline_queries: None,
+            can_connect_to_business: None,
+            has_main_web_app: None,
+            can_manage_bots: None,
+            supports_join_request_queries: None,
         };
         assert_eq!(user_mention_or_link(&user_without_username), "[Name](tg://user/?id=123456789)")
     }
