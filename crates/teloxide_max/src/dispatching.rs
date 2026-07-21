@@ -235,7 +235,8 @@ pub use filter_ext::{MessageFilterExt, UpdateFilterExt};
 pub use handler_description::DpHandlerDescription;
 pub use handler_ext::{filter_command, filter_mention_command, HandlerExt};
 pub use middleware::{
-    ErrorCatchMiddleware, LoggingMiddleware, Middleware, MiddlewareContext, ThrottleMiddleware,
+    ErrorCatchMiddleware, ErrorEvent, ErrorFilterChain, ExceptionMessageFilter,
+    ExceptionTypeFilter, LoggingMiddleware, Middleware, MiddlewareContext, ThrottleMiddleware,
 };
 pub use router::{Router, RouterExt};
 

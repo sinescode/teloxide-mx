@@ -14,10 +14,17 @@ pub use crate::dispatching::{
 
 pub use crate::dispatching::middleware::{Middleware, MiddlewareContext};
 
+pub use crate::handlers::{
+    CallbackQueryHandler, CallbackQueryHandlerExt, ErrorHandler as ClassBasedErrorHandler,
+    HandlerExt as ClassHandlerExt, HandlerResult, InlineQueryHandler, MessageHandler,
+    MessageHandlerExt,
+};
+
 pub use crate::{
     sugar::message::MessageExt,
     testing::{MockBot, UpdateBuilder},
     utils::{
+        auth_widget,
         callback_answer::CallbackAnswer,
         callback_data::{CallbackData, CallbackDataExt},
         chat_action::ChatActionSender,
@@ -27,6 +34,7 @@ pub use crate::{
         flags::{FlagKey, Flags},
         i18n::{I18nContext, I18nLoader, Translation},
         keyboard::{InlineKeyboardBuilder, ReplyKeyboardBuilder},
+        lazy_i18n::{lazy_gettext, LazyTranslation},
         magic_filter::{ComposedFilter, FilterExt, F},
         media_group::MediaGroupBuilder,
     },

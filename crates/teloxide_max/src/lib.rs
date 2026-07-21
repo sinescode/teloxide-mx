@@ -140,6 +140,7 @@ pub mod backoff;
 pub mod dispatching;
 pub mod error_handlers;
 pub mod error_types;
+pub mod handlers;
 pub mod prelude;
 #[cfg(feature = "ctrlc_handler")]
 pub mod repls;

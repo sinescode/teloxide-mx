@@ -574,6 +574,79 @@ where
     pub fn shutdown_token(&self) -> ShutdownToken {
         self.state.clone()
     }
+
+    /// Starts polling for multiple bots simultaneously.
+    ///
+    /// Each bot gets its own polling task, but they all share the same
+    /// handler tree, dependencies, and error handlers.
+    ///
+    /// This is equivalent to aiogram's `dp.start_polling(bot1, bot2, ...)`.
+    ///
+    /// # Arguments
+    ///
+    /// * `bots` - A vector of bot instances to poll.
+    ///
+    /// # Example
+    ///
+    /// ```rust,no_run
+    /// # use teloxide_max::prelude::*;
+    /// # use teloxide_max::dispatching::Dispatcher;
+    /// # #[tokio::main]
+    /// # async fn main() {
+    /// # let bot1 = Bot::new("TOKEN1");
+    /// # let bot2 = Bot::new("TOKEN2");
+    /// # let handler = dptree::entry();
+    /// let mut dp = Dispatcher::builder(bot1, handler.clone()).build();
+    /// dp.dispatch_multi(vec![bot1, bot2]).await;
+    /// # }
+    /// ```
+    pub async fn dispatch_multi(&mut self, bots: Vec<R>)
+    where
+        R: Requester + Clone,
+        <R as Requester>::GetUpdates: Send,
+    {
+        let mut handles = Vec::new();
+
+        for bot in bots {
+            let handler = Arc::clone(&self.handler);
+            let dependencies = self.dependencies.clone();
+            let default_handler = Arc::clone(&self.default_handler);
+            let error_handler = Arc::clone(&self.error_handler);
+            let distribution_f = self.distribution_f;
+            let worker_queue_size = self.worker_queue_size;
+
+            let handle = tokio::spawn(async move {
+                let listener = update_listeners::polling_default(bot.clone()).await;
+
+                // Build a temporary dispatcher for this bot
+                let mut dp = Dispatcher {
+                    bot,
+                    dependencies,
+                    handler,
+                    default_handler,
+                    error_handler,
+                    state: ShutdownToken::new(),
+                    distribution_f,
+                    worker_queue_size,
+                    workers: HashMap::new(),
+                    default_worker: None,
+                    current_number_of_active_workers: Default::default(),
+                    max_number_of_active_workers: Default::default(),
+                };
+
+                let err_handler =
+                    LoggingErrorHandler::with_custom_text("An error from the update listener");
+                dp.dispatch_with_listener(listener, err_handler).await;
+            });
+
+            handles.push(handle);
+        }
+
+        // Wait for all polling tasks
+        for handle in handles {
+            let _ = handle.await;
+        }
+    }
 }
 
 impl<R, Err, Key> Dispatcher<R, Err, Key> {

@@ -1,5 +1,6 @@
 //! Some useful utilities.
 
+pub mod auth_widget;
 pub mod callback_answer;
 pub mod callback_data;
 pub mod chat_action;
@@ -12,6 +13,7 @@ pub mod formatting;
 pub mod html;
 pub mod i18n;
 pub mod keyboard;
+pub mod lazy_i18n;
 pub mod magic_filter;
 pub mod markdown;
 pub mod media_group;
