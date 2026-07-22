@@ -1,7 +1,11 @@
 //!
-use std::net::SocketAddr;
+use std::{net::SocketAddr, sync::Arc};
 
-use crate::{requests::Requester, types::InputFile};
+use crate::{
+    requests::Requester,
+    types::{AllowedUpdate, InputFile},
+    utils::webhook_security::TelegramIpFilter,
+};
 
 /// Options related to setting up webhooks.
 #[must_use]
@@ -58,6 +62,27 @@ pub struct Options {
     ///
     /// Default - `teloxide_max` will generate a random token.
     pub secret_token: Option<String>,
+
+    /// Restrict which update kinds Telegram should deliver (mirrors
+    /// [`set_webhook.allowed_updates`][set_webhook]).
+    ///
+    /// When `None`, the dispatcher may still refine this via
+    /// [`UpdateListener::hint_allowed_updates`] after setup (re-issues
+    /// `set_webhook` when a bot handle is available).
+    ///
+    /// [set_webhook]: https://core.telegram.org/bots/api#setwebhook
+    /// [`UpdateListener::hint_allowed_updates`]: crate::update_listeners::UpdateListener::hint_allowed_updates
+    pub allowed_updates: Option<Vec<AllowedUpdate>>,
+
+    /// Optional IP allow-list for webhook POSTs (aiogram `IPFilter` parity).
+    ///
+    /// When set, requests whose client IP is not in the filter are rejected
+    /// with `403 Forbidden`. Client IP is taken from `X-Forwarded-For`,
+    /// `X-Real-IP`, or `CF-Connecting-IP` (first valid), else from the TCP
+    /// peer when connect-info is available.
+    ///
+    /// Use [`TelegramIpFilter::default`] for Telegram's published IPv4 ranges.
+    pub ip_filter: Option<Arc<TelegramIpFilter>>,
 }
 
 impl Options {
@@ -73,6 +98,8 @@ impl Options {
             max_connections: None,
             drop_pending_updates: false,
             secret_token: None,
+            allowed_updates: None,
+            ip_filter: None,
         }
     }
 
@@ -123,11 +150,28 @@ impl Options {
     ///
     /// After a call to this function `self.secret_token` is always `Some(_)`.
     ///
-    /// **Note**: if you leave webhook setup to teloxide_max, it will automatically
-    /// generate a secret token. Call this function only if you need to know the
-    /// secret (for example because you are calling `set_webhook` by yourself).
+    /// **Note**: if you leave webhook setup to teloxide_max, it will
+    /// automatically generate a secret token. Call this function only if
+    /// you need to know the secret (for example because you are calling
+    /// `set_webhook` by yourself).
     pub fn get_or_gen_secret_token(&mut self) -> &str {
         self.secret_token.get_or_insert_with(gen_secret_token)
+    }
+
+    /// Limit Telegram to the given update kinds for this webhook.
+    pub fn allowed_updates(self, allowed_updates: Vec<AllowedUpdate>) -> Self {
+        Self { allowed_updates: Some(allowed_updates), ..self }
+    }
+
+    /// Restrict webhook clients to the given IP filter (Telegram ranges by
+    /// default via [`TelegramIpFilter::default`]).
+    pub fn ip_filter(self, filter: TelegramIpFilter) -> Self {
+        Self { ip_filter: Some(Arc::new(filter)), ..self }
+    }
+
+    /// Restrict webhook clients to Telegram's published IPv4 ranges.
+    pub fn telegram_ip_filter(self) -> Self {
+        self.ip_filter(TelegramIpFilter::default())
     }
 }
 
@@ -151,7 +195,12 @@ where
 
     let secret = options.get_or_gen_secret_token().to_owned();
     let &mut Options {
-        ref url, ref mut certificate, max_connections, drop_pending_updates, ..
+        ref url,
+        ref mut certificate,
+        max_connections,
+        drop_pending_updates,
+        ref allowed_updates,
+        ..
     } = options;
 
     let mut req = bot.set_webhook(url.clone());
@@ -159,6 +208,9 @@ where
     req.payload_mut().max_connections = max_connections;
     req.payload_mut().drop_pending_updates = Some(drop_pending_updates);
     req.payload_mut().secret_token = Some(secret);
+    if let Some(updates) = allowed_updates {
+        req.payload_mut().allowed_updates = Some(updates.clone());
+    }
 
     req.send().await?;
 

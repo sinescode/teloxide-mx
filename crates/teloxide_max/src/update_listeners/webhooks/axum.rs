@@ -1,17 +1,28 @@
-use std::{convert::Infallible, future::Future, sync::Arc};
+use std::{
+    convert::Infallible,
+    future::Future,
+    net::SocketAddr,
+    pin::Pin,
+    sync::{Arc, Mutex},
+};
 
 use axum::{
-    extract::{FromRequestParts, State},
-    http::{request::Parts, status::StatusCode},
+    extract::{ConnectInfo, FromRequestParts, State},
+    http::{request::Parts, status::StatusCode, HeaderMap},
 };
 use tokio::sync::mpsc;
 
 use crate::{
     requests::Requester,
     stop::StopFlag,
-    types::{Update, UpdateKind},
+    types::{AllowedUpdate, Update, UpdateKind},
     update_listeners::{webhooks::Options, UpdateListener},
+    utils::webhook_security::{extract_client_ip, TelegramIpFilter},
 };
+
+/// Async hook that re-issues `set_webhook` with a refined allow-list.
+type RebindHook =
+    Arc<dyn Fn(Vec<AllowedUpdate>) -> Pin<Box<dyn Future<Output = ()> + Send>> + Send + Sync>;
 
 /// Webhook implementation based on the [mod@axum] framework.
 ///
@@ -43,8 +54,9 @@ pub async fn axum<R>(
     options: Options,
 ) -> Result<impl UpdateListener<Err = Infallible>, R::Err>
 where
-    R: Requester + Send + 'static,
+    R: Requester + Clone + Send + Sync + 'static,
     <R as Requester>::DeleteWebhook: Send,
+    <R as Requester>::SetWebhook: Send,
 {
     let Options { address, .. } = options;
 
@@ -56,7 +68,8 @@ where
             .await
             .inspect_err(|_| stop_token.stop())
             .expect("Couldn't bind to the address");
-        axum::serve(tcp_listener, app)
+        // Connect-info enables peer IP fallback for TelegramIpFilter.
+        axum::serve(tcp_listener, app.into_make_service_with_connect_info::<SocketAddr>())
             .with_graceful_shutdown(stop_flag)
             .await
             .inspect_err(|_| stop_token.stop())
@@ -115,15 +128,39 @@ pub async fn axum_to_router<R>(
     R::Err,
 >
 where
-    R: Requester + Send,
+    R: Requester + Clone + Send + Sync + 'static,
     <R as Requester>::DeleteWebhook: Send,
+    <R as Requester>::SetWebhook: Send,
 {
     use crate::{requests::Request, update_listeners::webhooks::setup_webhook};
     use futures::FutureExt;
+    use teloxide_max_core::requests::HasPayload;
 
     setup_webhook(&bot, &mut options).await?;
 
-    let (listener, stop_flag, router) = axum_no_setup(options);
+    let rebind_bot = bot.clone();
+    let rebind_url = options.url.clone();
+    let rebind_secret = options.secret_token.clone();
+    let rebind_max = options.max_connections;
+    let rebind_drop = options.drop_pending_updates;
+
+    let rebind: RebindHook = Arc::new(move |allowed_updates: Vec<AllowedUpdate>| {
+        let bot = rebind_bot.clone();
+        let url = rebind_url.clone();
+        let secret = rebind_secret.clone();
+        Box::pin(async move {
+            let mut req = bot.set_webhook(url);
+            req.payload_mut().max_connections = rebind_max;
+            req.payload_mut().drop_pending_updates = Some(rebind_drop);
+            req.payload_mut().secret_token = secret;
+            req.payload_mut().allowed_updates = Some(allowed_updates);
+            if let Err(err) = req.send().await {
+                log::error!("Couldn't rebind webhook allowed_updates: {err}");
+            }
+        })
+    });
+
+    let (listener, stop_flag, router) = axum_no_setup_inner(options, Some(rebind));
 
     let stop_flag = stop_flag.then(move |()| async move {
         // This assignment is needed to not require `R: Sync` since without it `&bot`
@@ -155,9 +192,16 @@ where
 pub fn axum_no_setup(
     options: Options,
 ) -> (impl UpdateListener<Err = Infallible>, impl Future<Output = ()>, axum::Router) {
+    axum_no_setup_inner(options, None)
+}
+
+fn axum_no_setup_inner(
+    options: Options,
+    rebind: Option<RebindHook>,
+) -> (impl UpdateListener<Err = Infallible>, impl Future<Output = ()>, axum::Router) {
     use crate::{
         stop::{mk_stop_token, StopToken},
-        update_listeners::{webhooks::tuple_first_mut, StatefulListener},
+        update_listeners::StatefulListener,
     };
     use axum::{response::IntoResponse, routing::post};
     use tokio_stream::wrappers::UnboundedReceiverStream;
@@ -168,6 +212,8 @@ pub fn axum_no_setup(
     async fn telegram_request(
         State(WebhookState { secret, flag, mut tx, ip_filter }): State<WebhookState>,
         secret_header: XTelegramBotApiSecretToken,
+        headers: HeaderMap,
+        connect_info: Option<ConnectInfo<SocketAddr>>,
         input: String,
     ) -> impl IntoResponse {
         use crate::utils::webhook_security::constant_time_eq;
@@ -182,10 +228,28 @@ pub fn axum_no_setup(
             return StatusCode::UNAUTHORIZED;
         }
 
-        // Validate IP if filter is configured
-        if let Some(_filter) = &ip_filter {
-            // IP validation would require extracting from axum extensions
-            // This is a placeholder for when IP extraction is wired up
+        // Validate IP if filter is configured (aiogram IPFilter parity)
+        if let Some(filter) = &ip_filter {
+            let header_map: std::collections::HashMap<String, String> = headers
+                .iter()
+                .filter_map(|(k, v)| {
+                    v.to_str().ok().map(|s| (k.as_str().to_ascii_lowercase(), s.to_owned()))
+                })
+                .collect();
+            let client_ip = extract_client_ip(&header_map)
+                .or_else(|| connect_info.map(|ConnectInfo(addr)| addr.ip().to_string()));
+
+            match client_ip {
+                Some(ip) if filter.is_allowed(&ip) => {}
+                Some(ip) => {
+                    log::warn!("webhook rejected: IP {ip} not in Telegram allow-list");
+                    return StatusCode::FORBIDDEN;
+                }
+                None => {
+                    log::warn!("webhook rejected: could not determine client IP for IP filter");
+                    return StatusCode::FORBIDDEN;
+                }
+            }
         }
 
         let tx = match tx.get() {
@@ -229,20 +293,51 @@ pub fn axum_no_setup(
         .with_state(WebhookState {
             tx: ClosableSender::new(tx),
             flag: stop_flag.clone(),
-            secret: options.secret_token,
-            ip_filter: None, // Can be set via Options in the future
+            secret: options.secret_token.clone(),
+            ip_filter: options.ip_filter.clone(),
         });
 
     let stream = UnboundedReceiverStream::new(rx);
 
-    // FIXME: this should support `hint_allowed_updates()`
-    let listener = StatefulListener::new(
-        (stream, stop_token),
-        tuple_first_mut,
-        |state: &mut (_, StopToken)| state.1.clone(),
+    // Shared slot so `hint_allowed_updates` can store / rebind webhook filters.
+    let allowed_slot: Arc<Mutex<Option<Vec<AllowedUpdate>>>> =
+        Arc::new(Mutex::new(options.allowed_updates.clone()));
+
+    type ListenerState =
+        (UnboundedReceiverStream<Result<Update, Infallible>>, StopToken, Option<RebindHook>);
+
+    let listener = StatefulListener::new_with_hints(
+        (stream, stop_token, rebind),
+        listener_stream_mut,
+        |state: &mut ListenerState| state.1.clone(),
+        Some(
+            move |state: &mut ListenerState, hint: &mut dyn Iterator<Item = AllowedUpdate>| {
+                let updates: Vec<AllowedUpdate> = hint.collect();
+                if let Ok(mut guard) = allowed_slot.lock() {
+                    *guard = Some(updates.clone());
+                }
+                // Re-issue set_webhook with the dispatcher-derived allow-list.
+                if let Some(rebind) = state.2.clone() {
+                    tokio::spawn(async move {
+                        rebind(updates).await;
+                    });
+                }
+            },
+        ),
     );
 
     (listener, stop_flag, app)
+}
+
+/// HRTB-friendly accessor — see `tuple_first_mut` in the parent module.
+fn listener_stream_mut(
+    state: &mut (
+        tokio_stream::wrappers::UnboundedReceiverStream<Result<Update, Infallible>>,
+        crate::stop::StopToken,
+        Option<RebindHook>,
+    ),
+) -> &mut tokio_stream::wrappers::UnboundedReceiverStream<Result<Update, Infallible>> {
+    &mut state.0
 }
 
 type UpdateSender = mpsc::UnboundedSender<Result<Update, std::convert::Infallible>>;
@@ -253,7 +348,7 @@ struct WebhookState {
     tx: UpdateCSender,
     flag: StopFlag,
     secret: Option<String>,
-    ip_filter: Option<Arc<crate::utils::webhook_security::TelegramIpFilter>>,
+    ip_filter: Option<Arc<TelegramIpFilter>>,
 }
 
 /// A terrible workaround to drop axum extension

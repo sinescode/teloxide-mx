@@ -59,7 +59,7 @@ impl<S> PostgresStorage<S> {
     ) -> Result<Arc<Self>, PostgresStorageError<Infallible>> {
         let pool =
             PgPoolOptions::new().max_connections(max_connections).connect(database_url).await?;
-        sqlx::query(include_str!("postgres_storage/queries/create_teloxide_max_dialogues.sql"))
+        sqlx::query(include_str!("postgres_storage/queries/create_teloxide_dialogues.sql"))
             .execute(&pool)
             .await?;
 

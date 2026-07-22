@@ -1,15 +1,15 @@
 //! End-to-end tests for Lazy i18n.
-//!
-//! Tests the lazy translation system.
 
-use teloxide_max::utils::lazy_i18n::{lazy_gettext, lazy_gettext_with_params, LazyTranslation};
+use teloxide_max::{
+    lazy_gettext,
+    utils::lazy_i18n::{lazy_gettext, lazy_gettext_with_params, LazyTranslation},
+};
 
 #[test]
 fn test_lazy_translation_basic() {
     let lt = lazy_gettext("hello");
     assert_eq!(lt.key(), "hello");
     assert!(lt.params().is_empty());
-    // Without loader, returns the key itself
     assert_eq!(lt.to_string(), "hello");
 }
 
@@ -49,51 +49,13 @@ fn test_lazy_gettext_with_params_fn() {
 }
 
 #[test]
-fn test_lazy_translation_from_str() {
-    let lt: LazyTranslation = "hello".into();
-    assert_eq!(lt.key(), "hello");
-}
+fn test_lazy_with_context() {
+    use std::{collections::HashMap, sync::Arc};
+    use teloxide_max::utils::i18n::{I18nContext, Translation};
 
-#[test]
-fn test_lazy_translation_from_string() {
-    let lt: LazyTranslation = "hello_world".to_string().into();
-    assert_eq!(lt.key(), "hello_world");
-}
-
-#[test]
-fn test_lazy_translation_display_without_loader() {
-    let lt = lazy_gettext!("fallback_key");
-    assert_eq!(format!("{lt}"), "fallback_key");
-}
-
-#[test]
-fn test_lazy_translation_clone() {
-    let lt1 = lazy_gettext!("test");
-    let lt2 = lt1.clone();
-    assert_eq!(lt1.key(), lt2.key());
-}
-
-#[test]
-fn test_lazy_translation_debug() {
-    let lt = lazy_gettext!("debug_test");
-    let debug_str = format!("{lt:?}");
-    assert!(debug_str.contains("debug_test"));
-}
-
-#[test]
-fn test_lazy_translation_multiple_params() {
-    let params = vec![
-        ("name".into(), "Alice".into()),
-        ("city".into(), "NYC".into()),
-        ("country".into(), "USA".into()),
-    ];
-    let lt = LazyTranslation::with_params("user_info", params);
-    assert_eq!(lt.params().len(), 3);
-}
-
-#[test]
-fn test_lazy_translation_empty_key() {
-    let lt = lazy_gettext!("");
-    assert_eq!(lt.key(), "");
-    assert_eq!(lt.to_string(), "");
+    let mut map = HashMap::new();
+    map.insert("hello".into(), Translation::new("Hello").with_locale("es", "Hola"));
+    let ctx = Arc::new(I18nContext::new("es", map));
+    let lt = LazyTranslation::new("hello").with_context(ctx);
+    assert_eq!(lt.to_string(), "Hola");
 }

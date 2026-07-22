@@ -187,10 +187,7 @@ pub struct ErrorEvent {
 impl ErrorEvent {
     /// Creates a new error event.
     pub fn new(error: &dyn std::error::Error) -> Self {
-        Self {
-            error: error.to_string(),
-            error_type: std::any::type_name_of_val(error).to_string(),
-        }
+        Self { error: error.to_string(), error_type: std::any::type_name_of_val(error).to_string() }
     }
 
     /// Creates an error event from a string.

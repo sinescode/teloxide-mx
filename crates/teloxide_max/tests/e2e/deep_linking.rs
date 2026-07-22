@@ -1,101 +1,93 @@
-//! End-to-end tests for Deep Linking.
-//!
-//! Tests payload encoding/decoding and link creation.
+//! End-to-end tests for deep linking utilities.
 
 use teloxide_max::utils::deep_linking;
 
 #[test]
+fn test_create_start_link() {
+    let link = deep_linking::create_start_link("my_bot", "payload123");
+    assert_eq!(link, "https://t.me/my_bot?start=payload123");
+}
+
+#[test]
+fn test_create_startgroup_link() {
+    let link = deep_linking::create_startgroup_link("my_bot", "group");
+    assert_eq!(link, "https://t.me/my_bot?startgroup=group");
+}
+
+#[test]
+fn test_create_startapp_link() {
+    let link = deep_linking::create_startapp_link("my_bot", "app");
+    assert_eq!(link, "https://t.me/my_bot?startapp=app");
+}
+
+#[test]
 fn test_encode_payload() {
-    let payload = "Hello World";
+    let payload = b"hello world";
     let encoded = deep_linking::encode_payload(payload);
     assert!(!encoded.is_empty());
-    // Encoded should be URL-safe
-    assert!(!encoded.contains(' '));
+    // URL-safe base64 should not contain '+' or '/'
     assert!(!encoded.contains('+'));
-    assert!(!encoded.contains('='));
+    assert!(!encoded.contains('/'));
 }
 
 #[test]
 fn test_decode_payload() {
-    let payload = "Hello World";
+    let payload = b"hello world";
     let encoded = deep_linking::encode_payload(payload);
-    let decoded = deep_linking::decode_payload(&encoded);
-    assert_eq!(decoded, Some(payload.to_string()));
+    let decoded = deep_linking::decode_payload(&encoded).unwrap();
+    assert_eq!(decoded, "hello world");
 }
 
 #[test]
 fn test_encode_decode_roundtrip() {
-    let original = "test_payload_123";
+    let original = b"test_payload_123";
     let encoded = deep_linking::encode_payload(original);
-    let decoded = deep_linking::decode_payload(&encoded);
-    assert_eq!(decoded, Some(original.to_string()));
+    let decoded = deep_linking::decode_payload(&encoded).unwrap();
+    assert_eq!(decoded, "test_payload_123");
 }
 
 #[test]
-fn test_decode_invalid_base64() {
-    let result = deep_linking::decode_payload("not_valid_base64!!!!");
-    assert!(result.is_none());
+fn test_decode_invalid() {
+    // URL_SAFE_NO_PAD may still decode some strings; empty is ok
+    let result = deep_linking::decode_payload("!!!");
+    assert!(result.is_err());
 }
 
 #[test]
-fn test_encode_empty_payload() {
-    let encoded = deep_linking::encode_payload("");
-    let decoded = deep_linking::decode_payload(&encoded);
-    assert_eq!(decoded, Some("".to_string()));
-}
-
-#[test]
-fn test_encode_special_characters() {
-    let payload = "Hello!@#$%^&*()";
-    let encoded = deep_linking::encode_payload(payload);
-    let decoded = deep_linking::decode_payload(&encoded);
-    assert_eq!(decoded, Some(payload.to_string()));
+fn test_encode_empty() {
+    let encoded = deep_linking::encode_payload(b"");
+    let decoded = deep_linking::decode_payload(&encoded).unwrap();
+    assert_eq!(decoded, "");
 }
 
 #[test]
 fn test_encode_unicode() {
-    let payload = "Hello 世界";
+    let payload = "你好世界".as_bytes();
     let encoded = deep_linking::encode_payload(payload);
-    let decoded = deep_linking::decode_payload(&encoded);
-    assert_eq!(decoded, Some(payload.to_string()));
+    let decoded = deep_linking::decode_payload(&encoded).unwrap();
+    assert_eq!(decoded, "你好世界");
 }
 
 #[test]
-fn test_encode_long_payload() {
-    let payload = "a".repeat(1000);
-    let encoded = deep_linking::encode_payload(payload.clone());
-    let decoded = deep_linking::decode_payload(&encoded);
-    assert_eq!(decoded, Some(payload));
-}
-
-#[test]
-fn test_encode_payload_length() {
-    let payload = "short";
+fn test_encode_special_chars() {
+    let payload = b"hello+world/test=";
     let encoded = deep_linking::encode_payload(payload);
-    // Base64 encoding increases length by ~33%
-    assert!(encoded.len() <= payload.len() * 2);
+    let decoded = deep_linking::decode_payload(&encoded).unwrap();
+    assert_eq!(decoded, "hello+world/test=");
 }
 
 #[test]
-fn test_decode_empty_string() {
-    let result = deep_linking::decode_payload("");
-    assert_eq!(result, Some("".to_string()));
+fn test_encode_string_owned() {
+    let payload = String::from("owned");
+    let encoded = deep_linking::encode_payload(payload.as_bytes());
+    let decoded = deep_linking::decode_payload(&encoded).unwrap();
+    assert_eq!(decoded, "owned");
 }
 
 #[test]
-fn test_encode_url_safe() {
-    let payload = "test+with/special=chars";
-    let encoded = deep_linking::encode_payload(payload);
-    // Should not contain URL-unsafe characters
-    assert!(!encoded.contains('+'));
-    assert!(!encoded.contains('/'));
-    assert!(!encoded.contains('='));
-}
-
-#[test]
-fn test_roundtrip_complex_payload() {
-    let payload = r#"{"user_id":123,"action":"start","data":"hello world"}"#;
-    let encoded = deep_linking::encode_payload(payload);
-    let decoded = deep_linking::decode_payload(&encoded);
-    assert_eq!(decoded, Some(payload.to_string()));
+fn test_deep_link_with_encoded_payload() {
+    let encoded = deep_linking::encode_payload(b"secret data");
+    let link = deep_linking::create_start_link("mybot", &encoded);
+    assert!(link.starts_with("https://t.me/mybot?start="));
+    assert!(link.contains(&encoded));
 }

@@ -16,6 +16,7 @@ struct CallbackDataVariantAttrs {
 }
 
 /// Represents a parsed variant of the CallbackData enum.
+#[derive(Clone)]
 struct CallbackDataVariant {
     ident: syn::Ident,
     suffix: String,
@@ -33,7 +34,7 @@ fn parse_enum_attrs(attrs: &[syn::Attribute]) -> Result<CallbackDataEnumAttrs> {
 
         let meta = &attr.meta;
         if let Meta::List(meta_list) = meta {
-            let _nested = meta_list.parse_nested_meta(|meta| {
+            meta_list.parse_nested_meta(|meta| {
                 if meta.path.is_ident("prefix") {
                     let value = meta.value()?;
                     let lit: Lit = value.parse()?;
@@ -179,7 +180,7 @@ pub(crate) fn callback_data_impl(input: DeriveInput) -> Result<TokenStream> {
         .map(|v| {
             let ident = &v.ident;
             let suffix = &v.suffix;
-            let full = format!("{}{}{}", prefix, separator, suffix);
+            let full = format!("{prefix}{separator}{suffix}");
 
             if v.fields.is_empty() {
                 quote! {
@@ -215,17 +216,28 @@ pub(crate) fn callback_data_impl(input: DeriveInput) -> Result<TokenStream> {
         }
     };
 
-    // Generate the deserialize function
-    let deserialize_arms: Vec<TokenStream> = variants
+    // Generate the deserialize function. Prefer longer variant keys first so
+    // that "action:select" is not shadowed by a shorter prefix match.
+    let mut variants_by_key_len = variants.clone();
+    variants_by_key_len.sort_by(|a, b| {
+        let ka = format!("{prefix}{separator}{}", a.suffix);
+        let kb = format!("{prefix}{separator}{}", b.suffix);
+        kb.len().cmp(&ka.len())
+    });
+
+    let deserialize_checks: Vec<TokenStream> = variants_by_key_len
         .iter()
         .map(|v| {
             let ident = &v.ident;
             let suffix = &v.suffix;
-            let full = format!("{}{}{}", prefix, separator, suffix);
+            let full = format!("{prefix}{separator}{suffix}");
+            let sep_str = separator.to_string();
 
             if v.fields.is_empty() {
                 quote! {
-                    #full => Ok(Self::#ident),
+                    if data == #full {
+                        return Ok(Self::#ident);
+                    }
                 }
             } else {
                 let field_parsers: Vec<TokenStream> = v
@@ -249,17 +261,15 @@ pub(crate) fn callback_data_impl(input: DeriveInput) -> Result<TokenStream> {
                 let field_names: Vec<&syn::Ident> = v.fields.iter().map(|(name, _)| name).collect();
 
                 quote! {
-                    #full => {
-                        let rest = &data[#full.len()..];
-                        if !rest.is_empty() && !rest.starts_with(#separator) {
-                            return Err(teloxide_max::utils::callback_data::CallbackDataError::DeserializationError(
-                                format!("expected separator '{}' after '{}'", #separator, #full)
-                            ));
-                        }
-                        let rest = if rest.starts_with(#separator) { &rest[1..] } else { "" };
+                    if data == #full || data.starts_with(concat!(#full, #sep_str)) {
+                        let rest = data
+                            .strip_prefix(#full)
+                            .unwrap_or("")
+                            .strip_prefix(#separator)
+                            .unwrap_or("");
                         let mut parts = rest.split(#separator);
                         #(#field_parsers)*
-                        Ok(Self::#ident { #(#field_names),* })
+                        return Ok(Self::#ident { #(#field_names),* });
                     }
                 }
             }
@@ -268,13 +278,11 @@ pub(crate) fn callback_data_impl(input: DeriveInput) -> Result<TokenStream> {
 
     let deserialize_fn = quote! {
         fn deserialize(data: &str) -> ::std::result::Result<Self, teloxide_max::utils::callback_data::CallbackDataError> {
-            // Try each variant's full prefix (prefix + separator + suffix)
-            match data {
-                #(#deserialize_arms)*
-                _ => Err(teloxide_max::utils::callback_data::CallbackDataError::DeserializationError(
-                    format!("no matching variant for data: '{}'", data)
-                )),
-            }
+            // Try each variant key (prefix + separator + suffix), longest first.
+            #(#deserialize_checks)*
+            Err(teloxide_max::utils::callback_data::CallbackDataError::DeserializationError(
+                format!("no matching variant for data: '{}'", data)
+            ))
         }
     };
 

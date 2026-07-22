@@ -72,9 +72,9 @@ where
     ///
     /// ## Note
     ///
-    /// `teloxide_max` normally (when using [`Dispatcher`] or [`repl`]s) sets this
-    /// automatically via [`hint_allowed_updates`], so you rarely need to use
-    /// `allowed_updates` explicitly.
+    /// `teloxide_max` normally (when using [`Dispatcher`] or [`repl`]s) sets
+    /// this automatically via [`hint_allowed_updates`], so you rarely need
+    /// to use `allowed_updates` explicitly.
     ///
     /// [`Dispatcher`]: crate::dispatching::Dispatcher
     /// [`repl`]: fn@crate::repl

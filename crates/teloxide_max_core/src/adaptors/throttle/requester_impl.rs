@@ -244,7 +244,6 @@ where
         set_game_score,
         set_game_score_inline,
         approve_chat_join_request,
-        send_message_draft,
             get_user_gifts,
             get_chat_gifts,
             repost_story,

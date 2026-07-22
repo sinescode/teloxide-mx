@@ -1,7 +1,8 @@
 //! Webhook IP filtering and security.
 //!
 //! Validates incoming webhook requests against Telegram's official IP ranges
-//! and provides constant-time secret token comparison to prevent timing attacks.
+//! and provides constant-time secret token comparison to prevent timing
+//! attacks.
 //!
 //! # Example
 //!

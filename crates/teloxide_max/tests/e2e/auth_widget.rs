@@ -119,9 +119,15 @@ fn test_full_widget_flow() {
     let username = "alice_smith";
     let photo_url = "https://example.com/photo.jpg";
 
-    let data_check_string = format!(
-        "auth_date={auth_date}\nfirst_name={first_name}\nid={id}\nlast_name={last_name}\nphoto_url={photo_url}\nusername={username}"
-    );
+    let data_check_string = [
+        format!("auth_date={auth_date}"),
+        format!("first_name={first_name}"),
+        format!("id={id}"),
+        format!("last_name={last_name}"),
+        format!("photo_url={photo_url}"),
+        format!("username={username}"),
+    ]
+    .join("\n");
 
     let hash = hmac_sha256(&secret, &data_check_string);
 
@@ -142,16 +148,12 @@ fn test_signature_sorted_keys() {
     let token = "test_token";
     let secret = sha256(token);
 
-    // Keys should be sorted alphabetically
-    let data_check = "b=2\na=1\nc=3";
+    // Keys must be sorted alphabetically in the data-check-string (Telegram rule).
+    let data_check = "a=1\nb=2\nc=3";
     let hash = hmac_sha256(&secret, data_check);
 
     // Pass in random order
-    let query = vec![
-        ("c".into(), "3".into()),
-        ("a".into(), "1".into()),
-        ("b".into(), "2".into()),
-    ];
+    let query = vec![("c".into(), "3".into()), ("a".into(), "1".into()), ("b".into(), "2".into())];
 
     assert!(auth_widget::check_signature(token, &hash, &query));
 }

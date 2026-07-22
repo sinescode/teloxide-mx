@@ -67,8 +67,7 @@ pub trait RequesterExt: Requester {
     /// # Example
     ///
     /// ```rust,no_run
-    /// use teloxide_max_core::prelude::*;
-    /// use teloxide_max_core::adaptors::request_hooks::RequestHooks;
+    /// use teloxide_max_core::{adaptors::request_hooks::RequestHooks, prelude::*};
     ///
     /// let bot = Bot::from_env().with_hooks(RequestHooks::log_all());
     /// ```

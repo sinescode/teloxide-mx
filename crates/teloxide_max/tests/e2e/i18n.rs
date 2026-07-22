@@ -14,9 +14,7 @@ fn test_translation_basic() {
 
 #[test]
 fn test_translation_with_locales() {
-    let t = Translation::new("Hello")
-        .with_locale("es", "Hola")
-        .with_locale("fr", "Bonjour");
+    let t = Translation::new("Hello").with_locale("es", "Hola").with_locale("fr", "Bonjour");
 
     assert_eq!(t.translate("en"), "Hello");
     assert_eq!(t.translate("es"), "Hola");
@@ -92,10 +90,7 @@ fn test_i18n_context_format() {
 #[test]
 fn test_i18n_context_format_multiple_params() {
     let mut translations = HashMap::new();
-    translations.insert(
-        "user_info".to_string(),
-        Translation::new("{name} is {age} years old"),
-    );
+    translations.insert("user_info".to_string(), Translation::new("{name} is {age} years old"));
 
     let ctx = I18nContext::new("en", translations);
     let result = ctx.translate_format("user_info", &[("name", "Alice"), ("age", "25")]);
@@ -158,10 +153,7 @@ fn test_i18n_loader_load_hashmap() {
 #[test]
 fn test_i18n_loader_load_hashmap_fallback() {
     let mut data = HashMap::new();
-    data.insert(
-        "test".to_string(),
-        HashMap::from([("es".to_string(), "prueba".to_string())]),
-    );
+    data.insert("test".to_string(), HashMap::from([("es".to_string(), "prueba".to_string())]));
 
     let translations = I18nLoader::load_hashmap(data);
     let test = translations.get("test").unwrap();

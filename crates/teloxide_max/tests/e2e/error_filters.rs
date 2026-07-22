@@ -52,7 +52,7 @@ fn test_exception_message_filter_exact() {
 
 #[test]
 fn test_exception_message_filter_regex() {
-    let filter = ExceptionMessageFilter::regex(r"error \d{3}");
+    let filter = ExceptionMessageFilter::regex(r"(?i)error \d{3}");
     assert!(filter.matches("Got error 404"));
     assert!(filter.matches("Error 500 occurred"));
     assert!(!filter.matches("No error here"));

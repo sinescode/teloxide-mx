@@ -105,6 +105,7 @@ impl I18nContext {
 }
 
 /// An i18n loader that can load translations from files.
+#[derive(Debug, Clone)]
 pub struct I18nLoader {
     base_path: PathBuf,
     default_locale: String,

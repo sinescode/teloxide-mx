@@ -8,13 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 0.0.1 - 2026-07-22
+
+Initial public version line for `teloxide_max_core` (version reset).
+
 ### Added
 - Support for TBA 9.3–10.2 (aiogram-oracle port): private chat topics, gifts enhancements, profile photos/audios, chat member tags, managed bots, guest mode, live photos, rich messages, ephemeral messages, communities, and subscription updates.
-
-## unreleased
-
-### Added
-
 - Support for TBA 9.2 ([#1403](https://github.com/sinescode/teloxide_max/pull/1403))
   - Add `checklist_task_id` field to `ReplyParameters` struct
   - Add `reply_to_checklist_task_id` field to `Message` struct
@@ -34,6 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Package version set to `0.0.1`
 - Support for TBA 9.2 ([#1403](https://github.com/sinescode/teloxide_max/pull/1403))
   - `ChatFullInfoPublicKind::Supergroup` is now of type `Box<ChatFullInfoPublicSupergroup>` instead of `ChatFullInfoPublicSupergroup` [**BC**]
 

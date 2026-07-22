@@ -1,6 +1,6 @@
 [package]
 name = "teloxide_max_core"
-version = "0.13.0"
+version = "0.0.1"
 description = "Core part of the `teloxide_max` library - telegram bot API client"
 
 rust-version.workspace = true

@@ -9,6 +9,7 @@ pub use crate::respond;
 
 pub use crate::dispatching::{
     dialogue::{Dialogue, DialogueData},
+    event_isolation::{DisabledEventIsolation, EventIsolation, SimpleEventIsolation},
     Dispatcher, HandlerExt as _, MessageFilterExt as _, Router, UpdateFilterExt as _,
 };
 
@@ -29,12 +30,14 @@ pub use crate::{
         callback_data::{CallbackData, CallbackDataExt},
         chat_action::ChatActionSender,
         command_start::CommandStart,
+        content_type::{ContentType, MessageContentTypeExt},
         deep_linking,
         filters::FilterBuilder,
         flags::{FlagKey, Flags},
         i18n::{I18nContext, I18nLoader, Translation},
         keyboard::{InlineKeyboardBuilder, ReplyKeyboardBuilder},
         lazy_i18n::{lazy_gettext, LazyTranslation},
+        magic_data::{and_f, invert_f, magic_data, or_f},
         magic_filter::{ComposedFilter, FilterExt, F},
         media_group::MediaGroupBuilder,
     },

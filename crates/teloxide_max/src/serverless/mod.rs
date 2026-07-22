@@ -38,8 +38,8 @@
 //! # #[tokio::main]
 //! # async fn main() {
 //! let bot = Bot::from_env();
-//! let webhook_handler = ServerlessWebhookHandler::new(bot, handler)
-//!     .with_secret_token("my_secret_token");
+//! let webhook_handler =
+//!     ServerlessWebhookHandler::new(bot, handler).with_secret_token("my_secret_token");
 //!
 //! // In your HTTP handler (e.g., axum, actix-web):
 //! // let status = webhook_handler.handle_event(event).await.unwrap();
@@ -81,10 +81,12 @@ pub type MessageHandler = Box<
 /// # Example
 ///
 /// ```rust,no_run
-/// use teloxide_max::prelude::*;
-/// use teloxide_max::serverless::LambdaHandler;
+/// use teloxide_max::{prelude::*, serverless::LambdaHandler};
 ///
-/// async fn handler(bot: Bot, msg: Message) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+/// async fn handler(
+///     bot: Bot,
+///     msg: Message,
+/// ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 ///     bot.send_message(msg.chat.id, "Hello from Lambda!").await?;
 ///     Ok(())
 /// }
@@ -183,15 +185,21 @@ impl LambdaHandler {
 
 /// Webhook event handler for serverless platforms.
 ///
-/// This is a platform-agnostic handler that can be used with any HTTP framework.
+/// This is a platform-agnostic handler that can be used with any HTTP
+/// framework.
 ///
 /// # Example
 ///
 /// ```rust,no_run
-/// use teloxide_max::prelude::*;
-/// use teloxide_max::serverless::{ServerlessWebhookHandler, WebhookEvent};
+/// use teloxide_max::{
+///     prelude::*,
+///     serverless::{ServerlessWebhookHandler, WebhookEvent},
+/// };
 ///
-/// async fn handler(bot: Bot, msg: Message) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+/// async fn handler(
+///     bot: Bot,
+///     msg: Message,
+/// ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 ///     bot.send_message(msg.chat.id, "Hello!").await?;
 ///     Ok(())
 /// }
@@ -199,8 +207,8 @@ impl LambdaHandler {
 /// # #[tokio::main]
 /// # async fn main() {
 /// let bot = Bot::from_env();
-/// let webhook_handler = ServerlessWebhookHandler::new(bot, handler)
-///     .with_secret_token("my_secret");
+/// let webhook_handler =
+///     ServerlessWebhookHandler::new(bot, handler).with_secret_token("my_secret");
 /// # }
 /// ```
 pub struct ServerlessWebhookHandler {
@@ -280,10 +288,7 @@ impl ServerlessWebhookHandler {
         body: &str,
         headers: &HashMap<String, String>,
     ) -> Result<u16, Box<dyn std::error::Error + Send + Sync>> {
-        let event = WebhookEvent {
-            body: body.to_string(),
-            headers: headers.clone(),
-        };
+        let event = WebhookEvent { body: body.to_string(), headers: headers.clone() };
         self.handle_event(event).await
     }
 }
@@ -293,10 +298,12 @@ impl ServerlessWebhookHandler {
 /// # Example
 ///
 /// ```rust,no_run
-/// use teloxide_max::prelude::*;
-/// use teloxide_max::serverless::CloudFunctionsHandler;
+/// use teloxide_max::{prelude::*, serverless::CloudFunctionsHandler};
 ///
-/// async fn handler(bot: Bot, msg: Message) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+/// async fn handler(
+///     bot: Bot,
+///     msg: Message,
+/// ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 ///     bot.send_message(msg.chat.id, "Hello from Cloud Functions!").await?;
 ///     Ok(())
 /// }
@@ -357,10 +364,12 @@ impl CloudFunctionsHandler {
 /// # Example
 ///
 /// ```rust,no_run
-/// use teloxide_max::prelude::*;
-/// use teloxide_max::serverless::WorkersHandler;
+/// use teloxide_max::{prelude::*, serverless::WorkersHandler};
 ///
-/// async fn handler(bot: Bot, msg: Message) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+/// async fn handler(
+///     bot: Bot,
+///     msg: Message,
+/// ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 ///     bot.send_message(msg.chat.id, "Hello from Workers!").await?;
 ///     Ok(())
 /// }
@@ -448,10 +457,7 @@ mod tests {
 
     #[test]
     fn webhook_event_parse_invalid() {
-        let event = WebhookEvent {
-            body: "not json".to_string(),
-            headers: HashMap::new(),
-        };
+        let event = WebhookEvent { body: "not json".to_string(), headers: HashMap::new() };
 
         let update = event.parse_update();
         assert!(update.is_err());

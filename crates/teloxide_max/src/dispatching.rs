@@ -215,6 +215,7 @@
 //! [`Update`]: crate::types::Update
 
 pub mod dialogue;
+pub mod event_isolation;
 pub mod middleware;
 pub mod router;
 
@@ -229,8 +230,12 @@ mod tracing;
 
 pub use crate::utils::shutdown_token::{IdleShutdownError, ShutdownToken};
 pub use dialogue::DialogueData;
-pub use dispatcher::{Dispatcher, DispatcherBuilder, UpdateHandler};
+pub use dispatcher::{Dispatcher, DispatcherBuilder, LifecycleHook, UpdateHandler};
 pub use distribution::DefaultKey;
+pub use event_isolation::{
+    DisabledEventIsolation, EventIsolation, IsolationGuard, KeyedEventIsolation,
+    SimpleEventIsolation,
+};
 pub use filter_ext::{MessageFilterExt, UpdateFilterExt};
 pub use handler_description::DpHandlerDescription;
 pub use handler_ext::{filter_command, filter_mention_command, HandlerExt};

@@ -1,130 +1,87 @@
-//! End-to-end tests for Chat Action sender.
-//!
-//! Tests the ChatActionSender utility.
+//! End-to-end tests for Chat Action sender API surface.
 
-use teloxide_max::utils::chat_action::ChatActionSender;
 use std::time::Duration;
 
+use teloxide_max::{
+    types::{ChatAction, ChatId},
+    utils::chat_action::{
+        ChatActionSender, ChatActionSenderConfig, DEFAULT_INITIAL_SLEEP, DEFAULT_INTERVAL,
+    },
+    Bot,
+};
+
 #[test]
-fn test_chat_action_sender_new() {
-    let _sender = ChatActionSender::new();
+fn test_default_interval() {
+    assert_eq!(DEFAULT_INTERVAL, Duration::from_secs(5));
+    assert_eq!(DEFAULT_INITIAL_SLEEP, Duration::from_secs(0));
 }
 
 #[test]
-fn test_chat_action_sender_with_interval() {
-    let _sender = ChatActionSender::new().with_interval(Duration::from_secs(3));
+fn test_config_defaults() {
+    let cfg = ChatActionSenderConfig::default();
+    assert!(matches!(cfg.action, ChatAction::Typing));
+    assert_eq!(cfg.interval, DEFAULT_INTERVAL);
+    assert_eq!(cfg.initial_sleep, DEFAULT_INITIAL_SLEEP);
+    assert!(cfg.message_thread_id.is_none());
 }
 
 #[test]
-fn test_chat_action_sender_with_action() {
-    let _sender = ChatActionSender::new().with_action("upload_photo");
+fn test_chat_action_variants() {
+    // Ensure TBA chat actions used by aiogram parity helpers exist.
+    let _ = ChatAction::Typing;
+    let _ = ChatAction::UploadPhoto;
+    let _ = ChatAction::RecordVideo;
+    let _ = ChatAction::UploadVideo;
+    let _ = ChatAction::RecordVoice;
+    let _ = ChatAction::UploadVoice;
+    let _ = ChatAction::UploadDocument;
+    let _ = ChatAction::FindLocation;
+    let _ = ChatAction::RecordVideoNote;
+    let _ = ChatAction::UploadVideoNote;
 }
 
-#[test]
-fn test_chat_action_sender_typing() {
-    let _sender = ChatActionSender::typing();
+#[tokio::test]
+async fn test_chat_action_sender_stops() {
+    let bot = Bot::new("1:test");
+    let sender = ChatActionSender::with_interval(
+        &bot,
+        ChatId(1),
+        ChatAction::Typing,
+        Duration::from_millis(50),
+    );
+    // Immediately stop — should not hang.
+    sender.stop();
 }
 
-#[test]
-fn test_chat_action_sender_upload_photo() {
-    let _sender = ChatActionSender::upload_photo();
-}
-
-#[test]
-fn test_chat_action_sender_record_video() {
-    let _sender = ChatActionSender::record_video();
-}
-
-#[test]
-fn test_chat_action_sender_upload_video() {
-    let _sender = ChatActionSender::upload_video();
-}
-
-#[test]
-fn test_chat_action_sender_record_voice() {
-    let _sender = ChatActionSender::record_voice();
-}
-
-#[test]
-fn test_chat_action_sender_upload_voice() {
-    let _sender = ChatActionSender::upload_voice();
-}
-
-#[test]
-fn test_chat_action_sender_upload_document() {
-    let _sender = ChatActionSender::upload_document();
-}
-
-#[test]
-fn test_chat_action_sender_choose_sticker() {
-    let _sender = ChatActionSender::choose_sticker();
-}
-
-#[test]
-fn test_chat_action_sender_find_location() {
-    let _sender = ChatActionSender::find_location();
-}
-
-#[test]
-fn test_chat_action_sender_record_video_note() {
-    let _sender = ChatActionSender::record_video_note();
-}
-
-#[test]
-fn test_chat_action_sender_upload_video_note() {
-    let _sender = ChatActionSender::upload_video_note();
-}
-
-#[test]
-fn test_chat_action_sender_chaining() {
-    let _sender = ChatActionSender::new()
-        .with_interval(Duration::from_secs(2))
-        .with_action("typing");
-}
-
-#[test]
-fn test_chat_action_sender_debug() {
-    let sender = ChatActionSender::new();
-    let debug_str = format!("{sender:?}");
-    assert!(!debug_str.is_empty());
-}
-
-#[test]
-fn test_chat_action_sender_clone() {
-    let sender1 = ChatActionSender::new();
-    let sender2 = sender1.clone();
-    let _ = sender2;
-}
-
-#[test]
-fn test_chat_action_sender_default_interval() {
-    let sender = ChatActionSender::new();
-    // Default interval should be 5 seconds
-    let _ = sender;
-}
-
-#[test]
-fn test_chat_action_sender_custom_interval() {
-    let _sender = ChatActionSender::new().with_interval(Duration::from_millis(100));
-}
-
-#[test]
-fn test_chat_action_sender_many_actions() {
-    let actions = vec![
-        "typing",
-        "upload_photo",
-        "record_video",
-        "upload_video",
-        "record_voice",
-        "upload_voice",
-        "upload_document",
-        "choose_sticker",
-        "find_location",
-        "record_video_note",
-        "upload_video_note",
-    ];
-
-    for action in actions {
-        let _sender = ChatActionSender::new().with_action(action);
+#[tokio::test]
+async fn test_chat_action_sender_drop() {
+    let bot = Bot::new("1:test");
+    {
+        let _sender = ChatActionSender::new(&bot, ChatId(1), ChatAction::UploadPhoto);
+        // Drop aborts the task.
     }
+}
+
+#[tokio::test]
+async fn test_chat_action_typing_helper() {
+    let bot = Bot::new("1:test");
+    let sender = ChatActionSender::typing(&bot, ChatId(1));
+    assert!(!sender.is_finished());
+    sender.stop();
+}
+
+#[tokio::test]
+async fn test_chat_action_with_config() {
+    let bot = Bot::new("1:test");
+    let sender = ChatActionSender::with_config(
+        &bot,
+        ChatId(1),
+        ChatActionSenderConfig {
+            action: ChatAction::UploadDocument,
+            interval: Duration::from_millis(100),
+            initial_sleep: Duration::from_millis(0),
+            message_thread_id: None,
+        },
+    );
+    sender.stop();
 }

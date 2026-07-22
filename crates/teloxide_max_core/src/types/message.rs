@@ -1071,7 +1071,7 @@ mod getters {
     /// [telegram docs]: https://core.telegram.org/bots/api#message
     impl Message {
         /// Returns the user who sent the message.
-        #[deprecated(since = "0.13.0", note = "use `.from` field instead")]
+        #[deprecated(since = "0.0.1", note = "use `.from` field instead")]
         #[must_use]
         pub fn from(&self) -> Option<&User> {
             self.from.as_ref()
@@ -1113,7 +1113,7 @@ mod getters {
             }
         }
 
-        #[deprecated(since = "0.13.0", note = "use `.sender_chat` field instead")]
+        #[deprecated(since = "0.0.1", note = "use `.sender_chat` field instead")]
         #[must_use]
         pub fn sender_chat(&self) -> Option<&Chat> {
             self.sender_chat.as_ref()
@@ -3526,6 +3526,14 @@ mod tests {
                     added_to_attachment_menu: false,
                     has_topics_enabled: false,
                     allows_users_to_create_topics: false,
+                can_join_groups: None,
+                can_read_all_group_messages: None,
+                supports_guest_queries: None,
+                supports_inline_queries: None,
+                can_connect_to_business: None,
+                has_main_web_app: None,
+                can_manage_bots: None,
+                supports_join_request_queries: None,
                 }],
                 additional_chat_count: None,
                 premium_subscription_month_count: Some(6),

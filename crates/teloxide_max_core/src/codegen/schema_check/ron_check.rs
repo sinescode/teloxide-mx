@@ -469,7 +469,8 @@ mod tests {
             },
         ]);
 
-        // Some types can be more narrow in teloxide_max, e.g. `Me` is a subset of `User`
+        // Some types can be more narrow in teloxide_max, e.g. `Me` is a subset of
+        // `User`
         exceptions.extend(vec![
             Exception::FieldType {
                 ron_raw_type: "ReplyMarkup".to_owned(),

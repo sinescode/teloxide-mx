@@ -7,17 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 0.0.1 - 2026-07-22
+
+Initial public version line for `teloxide_max` (version reset).
+
 ### Added
 - Support for TBA 9.3–10.2 (aiogram-oracle port): private chat topics, gifts enhancements, profile photos/audios, chat member tags, managed bots, guest mode, live photos, rich messages, ephemeral messages, communities, and subscription updates.
-
-## unreleased
-
-### Added
-
 - `ParticipantIdInvalid` and `ChatAdminRequired` variants to `ApiError` ([#1349](https://github.com/sinescode/teloxide_max/issues/1349))
 - Support for TBA 9.2 ([#1403](https://github.com/sinescode/teloxide_max/pull/1403))
   - Add `filter_suggested_post_approved`, `filter_suggested_post_approval_failed`, `filter_suggested_post_declined`, `filter_suggested_post_paid`, `filter_suggested_post_refunded` filters to the `MessageFilterExt` trait
   - `ChatFullInfoPublicKind::Supergroup` is now of type `Box<ChatFullInfoPublicSupergroup>` instead of `ChatFullInfoPublicSupergroup` [**BC**]
+- Aiogram parity utilities: `ContentType`, `magic_data` / logic filters, dispatcher `on_startup` / `on_shutdown`, Message sugar (`copy_to`, `edit_caption`, `answer_media_group`, `answer_poll`)
+- ChatActionSender sends the first action immediately; `typing()` helper and `ChatActionSenderConfig`
 
 ### Fixed
 
@@ -44,6 +45,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Package version set to `0.0.1` (with `teloxide_max_core` and `teloxide_max_macros` also at `0.0.1`)
 - Some dependencies were bumped: `derive_more` to `2.0.1`, `deadpool-redis` to `0.22.0` ([#1408](https://github.com/sinescode/teloxide_max/pull/1408))
 
 ## 0.17.0 - 2025-07-11

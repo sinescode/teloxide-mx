@@ -13,7 +13,7 @@
 //! let encoded = deep_linking::encode_payload(b"hello world");
 //! let link = deep_linking::create_start_link("my_bot", &encoded);
 //!
-//! let decoded = deep_linking::decode_payload(&encoded);
+//! let decoded = deep_linking::decode_payload(&encoded).unwrap();
 //! assert_eq!(decoded, "hello world");
 //! # }
 //! ```

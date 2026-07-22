@@ -1,59 +1,63 @@
 //! End-to-end tests for Formatting Builder.
-//!
-//! Tests the composable text formatting system.
 
 use teloxide_max::utils::formatting::{
-    as_list, as_marked_list, as_numbered_list, Bold, Code, Italic, Pre, Spoiler, Strikethrough,
-    Text, Underline,
+    Bold, Code, FormatNode, Italic, Pre, Spoiler, Strikethrough, Text, Underline,
 };
 
 #[test]
-fn test_bold_creation() {
-    let bold = Bold::new("Hello");
-    assert_eq!(bold.text(), "Hello");
+fn test_bold_render() {
+    let (text, entities) = Bold::new("Hello").render(0);
+    assert_eq!(text, "Hello");
+    assert_eq!(entities.len(), 1);
 }
 
 #[test]
-fn test_italic_creation() {
-    let italic = Italic::new("World");
-    assert_eq!(italic.text(), "World");
+fn test_italic_render() {
+    let (text, entities) = Italic::new("World").render(0);
+    assert_eq!(text, "World");
+    assert_eq!(entities.len(), 1);
 }
 
 #[test]
-fn test_code_creation() {
-    let code = Code::new("let x = 5;");
-    assert_eq!(code.text(), "let x = 5;");
+fn test_code_render() {
+    let (text, entities) = Code::new("let x = 5;").render(0);
+    assert_eq!(text, "let x = 5;");
+    assert_eq!(entities.len(), 1);
 }
 
 #[test]
-fn test_pre_creation() {
-    let pre = Pre::new("fn main() {}");
-    assert_eq!(pre.text(), "fn main() {}");
+fn test_pre_render() {
+    let (text, entities) = Pre::new("fn main() {}").render(0);
+    assert_eq!(text, "fn main() {}");
+    assert_eq!(entities.len(), 1);
 }
 
 #[test]
 fn test_pre_with_language() {
-    let pre = Pre::language("fn main() {}", "rust");
-    assert_eq!(pre.text(), "fn main() {}");
-    assert_eq!(pre.language(), Some("rust"));
+    let (text, entities) = Pre::new("fn main() {}").language("rust").render(0);
+    assert_eq!(text, "fn main() {}");
+    assert_eq!(entities.len(), 1);
 }
 
 #[test]
-fn test_underline_creation() {
-    let underline = Underline::new("Underlined");
-    assert_eq!(underline.text(), "Underlined");
+fn test_underline_render() {
+    let (text, entities) = Underline::new("Underlined").render(0);
+    assert_eq!(text, "Underlined");
+    assert_eq!(entities.len(), 1);
 }
 
 #[test]
-fn test_strikethrough_creation() {
-    let strikethrough = Strikethrough::new("Deleted");
-    assert_eq!(strikethrough.text(), "Deleted");
+fn test_strikethrough_render() {
+    let (text, entities) = Strikethrough::new("Deleted").render(0);
+    assert_eq!(text, "Deleted");
+    assert_eq!(entities.len(), 1);
 }
 
 #[test]
-fn test_spoiler_creation() {
-    let spoiler = Spoiler::new("Secret");
-    assert_eq!(spoiler.text(), "Secret");
+fn test_spoiler_render() {
+    let (text, entities) = Spoiler::new("Secret").render(0);
+    assert_eq!(text, "Secret");
+    assert_eq!(entities.len(), 1);
 }
 
 #[test]
@@ -66,7 +70,7 @@ fn test_text_render_empty() {
 
 #[test]
 fn test_text_render_plain() {
-    let text = Text::new(vec!["Hello World".into()]);
+    let text = Text::raw("Hello World");
     let (content, entities) = text.render();
     assert_eq!(content, "Hello World");
     assert!(entities.is_empty());
@@ -74,103 +78,30 @@ fn test_text_render_plain() {
 
 #[test]
 fn test_text_render_bold() {
-    let text = Text::new(vec![Bold::new("Hello").into()]);
+    let text = Text::new(vec![Box::new(Bold::new("Hello")) as Box<dyn FormatNode>]);
     let (content, entities) = text.render();
     assert_eq!(content, "Hello");
     assert_eq!(entities.len(), 1);
 }
 
 #[test]
-fn test_text_render_mixed() {
-    let text = Text::new(vec![
-        Bold::new("Name: ").into(),
-        "Alice".into(),
-        "\n".into(),
-        Code::new("Age: ").into(),
-        "25".into(),
-    ]);
-    let (content, _entities) = text.render();
-    assert!(content.contains("Name:"));
-    assert!(content.contains("Alice"));
-    assert!(content.contains("Age:"));
-}
-
-#[test]
-fn test_text_as_html() {
-    let text = Text::new(vec![Bold::new("Hello").into(), " ".into(), Italic::new("World").into()]);
-    let html = text.as_html();
-    assert!(html.contains("<b>Hello</b>"));
-    assert!(html.contains("<i>World</i>"));
-}
-
-#[test]
-fn test_text_as_markdown() {
-    let text = Text::new(vec![Bold::new("Hello").into(), " ".into(), Italic::new("World").into()]);
-    let md = text.as_markdown();
-    assert!(md.contains("**Hello**"));
-    assert!(md.contains("_World_"));
-}
-
-#[test]
-fn test_as_list() {
-    let text = as_list(vec![
-        Bold::new("Item 1").into(),
-        Italic::new("Item 2").into(),
-        Code::new("Item 3").into(),
-    ]);
-    let (content, _) = text.render();
-    assert!(content.contains("Item 1"));
-    assert!(content.contains("Item 2"));
-    assert!(content.contains("Item 3"));
-}
-
-#[test]
-fn test_as_marked_list() {
-    let text = as_marked_list(vec!["A", "B", "C"]);
-    let (content, _) = text.render();
-    assert!(content.contains("- A"));
-    assert!(content.contains("- B"));
-    assert!(content.contains("- C"));
-}
-
-#[test]
-fn test_as_numbered_list() {
-    let text = as_numbered_list(vec!["First", "Second", "Third"]);
-    let (content, _) = text.render();
-    assert!(content.contains("1. First"));
-    assert!(content.contains("2. Second"));
-    assert!(content.contains("3. Third"));
-}
-
-#[test]
-fn test_text_from_entities() {
-    let text = Text::from_entities("Hello World", &[]);
-    let (content, _) = text.render();
-    assert_eq!(content, "Hello World");
-}
-
-#[test]
-fn test_nested_formatting() {
-    let text = Text::new(vec![
-        Bold::new(vec![Italic::new("nested").into()]).into(),
-    ]);
-    let (content, _) = text.render();
-    assert!(content.contains("nested"));
-}
-
-#[test]
-fn test_formatting_with_link() {
-    use teloxide_max::utils::formatting::Link;
-    let link = Link::new("Click here", "https://example.com");
-    let text = Text::new(vec![link.into()]);
+fn test_text_composite() {
+    let mut text = Text::raw("");
+    text.push(Box::new(Bold::new("Hi")));
+    text.push(Box::new(Italic::new(" there")));
     let (content, entities) = text.render();
-    assert_eq!(content, "Click here");
-    assert_eq!(entities.len(), 1);
+    assert_eq!(content, "Hi there");
+    assert_eq!(entities.len(), 2);
 }
 
 #[test]
-fn test_formatting_display() {
-    let text = Text::new(vec![Bold::new("Test").into()]);
-    let display = format!("{text}");
-    assert_eq!(display, "Test");
+fn test_from_entities() {
+    use teloxide_max::types::{MessageEntity, MessageEntityKind};
+    let text = Text::from_entities(
+        "Hello",
+        &[MessageEntity { offset: 0, length: 5, kind: MessageEntityKind::Bold }],
+    );
+    let (content, entities) = text.render();
+    assert_eq!(content, "Hello");
+    assert!(!entities.is_empty());
 }

@@ -243,7 +243,8 @@ impl ComposedFilter {
         ComposedFilter::new(move |msg| !(self.predicate)(msg))
     }
 
-    /// Convert this filter into a boxed predicate suitable for dptree's `.filter()`.
+    /// Convert this filter into a boxed predicate suitable for dptree's
+    /// `.filter()`.
     ///
     /// Usage: `.filter(F::TEXT.contains("hello").into_dptree())`
     pub fn into_dptree(self) -> Box<dyn Fn(&Message) -> bool + Send + Sync> {

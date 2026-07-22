@@ -26,8 +26,10 @@
 //! // router.add_message_handler(GreetingHandler::endpoint());
 //! ```
 
-use crate::types::{CallbackQuery, Chat, Message, User};
-use crate::Bot;
+use crate::{
+    types::{CallbackQuery, Chat, Message, User},
+    Bot,
+};
 
 /// Result type for handlers.
 pub type HandlerResult = Result<(), Box<dyn std::error::Error + Send + Sync>>;
@@ -62,7 +64,13 @@ pub trait MessageHandler: Send + Sync + 'static {
     async fn handle(&self, bot: Bot, msg: Message) -> HandlerResult;
 
     /// Creates a handler function that can be used with dptree.
-    fn endpoint() -> impl Fn(Bot, Message) -> std::pin::Pin<Box<dyn std::future::Future<Output = HandlerResult> + Send>> + Send + Sync + 'static
+    fn endpoint() -> impl Fn(
+        Bot,
+        Message,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = HandlerResult> + Send>>
+           + Send
+           + Sync
+           + 'static
     where
         Self: Sized + 'static,
     {
@@ -106,7 +114,13 @@ pub trait CallbackQueryHandler: Send + Sync + 'static {
     async fn handle(&self, bot: Bot, query: CallbackQuery) -> HandlerResult;
 
     /// Creates a handler function that can be used with dptree.
-    fn endpoint() -> impl Fn(Bot, CallbackQuery) -> std::pin::Pin<Box<dyn std::future::Future<Output = HandlerResult> + Send>> + Send + Sync + 'static
+    fn endpoint() -> impl Fn(
+        Bot,
+        CallbackQuery,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = HandlerResult> + Send>>
+           + Send
+           + Sync
+           + 'static
     where
         Self: Sized + 'static,
     {
@@ -136,7 +150,10 @@ pub trait CallbackQueryHandler: Send + Sync + 'static {
 ///
 /// #[async_trait::async_trait]
 /// impl ErrorHandler for MyErrorHandler {
-///     async fn handle_error(&self, error: Box<dyn std::error::Error + Send + Sync>) -> HandlerResult {
+///     async fn handle_error(
+///         &self,
+///         error: Box<dyn std::error::Error + Send + Sync>,
+///     ) -> HandlerResult {
 ///         log::error!("Error occurred: {error}");
 ///         Ok(())
 ///     }
@@ -191,21 +208,33 @@ pub trait PreCheckoutQueryHandler: Send + Sync + 'static {
     fn new() -> Self;
 }
 
-/// Extension trait for converting class-based handlers to dptree handlers.
-pub trait HandlerExt {
+/// Extension trait for converting message class-based handlers to dptree
+/// handlers.
+pub trait MessageHandlerEndpoint {
     /// Converts this handler into a dptree-compatible endpoint function.
-    fn as_message_endpoint(self) -> impl Fn(Bot, Message) -> std::pin::Pin<Box<dyn std::future::Future<Output = HandlerResult> + Send>> + Send + Sync + 'static
+    fn into_message_endpoint(
+        self,
+    ) -> impl Fn(
+        Bot,
+        Message,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = HandlerResult> + Send>>
+           + Send
+           + Sync
+           + 'static
     where
-        Self: MessageHandler + Sized + 'static;
-
-    /// Converts this handler into a dptree-compatible endpoint function.
-    fn as_callback_endpoint(self) -> impl Fn(Bot, CallbackQuery) -> std::pin::Pin<Box<dyn std::future::Future<Output = HandlerResult> + Send>> + Send + Sync + 'static
-    where
-        Self: CallbackQueryHandler + Sized + 'static;
+        Self: Sized + 'static;
 }
 
-impl<T: MessageHandler + 'static> HandlerExt for T {
-    fn as_message_endpoint(self) -> impl Fn(Bot, Message) -> std::pin::Pin<Box<dyn std::future::Future<Output = HandlerResult> + Send>> + Send + Sync + 'static
+impl<T: MessageHandler + 'static> MessageHandlerEndpoint for T {
+    fn into_message_endpoint(
+        self,
+    ) -> impl Fn(
+        Bot,
+        Message,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = HandlerResult> + Send>>
+           + Send
+           + Sync
+           + 'static
     where
         Self: Sized + 'static,
     {
@@ -215,8 +244,35 @@ impl<T: MessageHandler + 'static> HandlerExt for T {
             Box::pin(async move { handler.handle(bot, msg).await })
         }
     }
+}
 
-    fn as_callback_endpoint(self) -> impl Fn(Bot, CallbackQuery) -> std::pin::Pin<Box<dyn std::future::Future<Output = HandlerResult> + Send>> + Send + Sync + 'static
+/// Extension trait for converting callback class-based handlers to dptree
+/// handlers.
+pub trait CallbackQueryHandlerEndpoint {
+    /// Converts this handler into a dptree-compatible endpoint function.
+    fn into_callback_endpoint(
+        self,
+    ) -> impl Fn(
+        Bot,
+        CallbackQuery,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = HandlerResult> + Send>>
+           + Send
+           + Sync
+           + 'static
+    where
+        Self: Sized + 'static;
+}
+
+impl<T: CallbackQueryHandler + 'static> CallbackQueryHandlerEndpoint for T {
+    fn into_callback_endpoint(
+        self,
+    ) -> impl Fn(
+        Bot,
+        CallbackQuery,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = HandlerResult> + Send>>
+           + Send
+           + Sync
+           + 'static
     where
         Self: Sized + 'static,
     {
@@ -228,13 +284,16 @@ impl<T: MessageHandler + 'static> HandlerExt for T {
     }
 }
 
+/// Backward-compatible alias for [`MessageHandlerEndpoint`].
+pub use MessageHandlerEndpoint as HandlerExt;
+
 /// Convenience methods for Message.
 pub trait MessageHandlerExt {
     /// Returns the chat for this message.
     fn chat(&self) -> &Chat;
 
     /// Returns the sender user for this message, if any.
-    fn from_user(&self) -> Option<&User>;
+    fn sender(&self) -> Option<&User>;
 
     /// Returns the text content of this message, if any.
     fn text_content(&self) -> Option<&str>;
@@ -245,7 +304,7 @@ impl MessageHandlerExt for Message {
         &self.chat
     }
 
-    fn from_user(&self) -> Option<&User> {
+    fn sender(&self) -> Option<&User> {
         self.from.as_ref()
     }
 
@@ -257,18 +316,20 @@ impl MessageHandlerExt for Message {
 /// Convenience methods for CallbackQuery.
 pub trait CallbackQueryHandlerExt {
     /// Returns the sender user for this callback query.
-    fn from_user(&self) -> Option<&User>;
+    fn sender(&self) -> &User;
 
     /// Returns the callback data, if any.
     fn callback_data(&self) -> Option<&str>;
 
-    /// Returns the message associated with this callback query, if any.
+    /// Returns the regular message associated with this callback query, if any.
+    ///
+    /// Returns `None` when the message is inaccessible to the bot.
     fn message(&self) -> Option<&Message>;
 }
 
 impl CallbackQueryHandlerExt for CallbackQuery {
-    fn from_user(&self) -> Option<&User> {
-        self.from.as_ref()
+    fn sender(&self) -> &User {
+        &self.from
     }
 
     fn callback_data(&self) -> Option<&str> {
@@ -276,7 +337,7 @@ impl CallbackQueryHandlerExt for CallbackQuery {
     }
 
     fn message(&self) -> Option<&Message> {
-        self.message.as_ref().map(|m| m.as_ref())
+        self.message.as_ref().and_then(|m| m.regular_message())
     }
 }
 

@@ -41,7 +41,8 @@ type HmacSha256 = Hmac<Sha256>;
 ///
 /// * `token` - The bot token used to compute the secret key.
 /// * `hash` - The `hash` value from the widget callback data.
-/// * `query` - Key-value pairs from the widget callback data (excluding `hash`).
+/// * `query` - Key-value pairs from the widget callback data (excluding
+///   `hash`).
 ///
 /// # Returns
 ///
@@ -52,11 +53,13 @@ pub fn check_signature(token: &str, hash: &str, query: &[(String, String)]) -> b
     }
 
     // Sort by key, filter out hash
-    let mut sorted: Vec<(&String, &String)> = query.iter().filter(|(k, _)| k != "hash").collect();
+    let mut sorted: Vec<(&String, &String)> =
+        query.iter().filter(|(k, _)| k != "hash").map(|(k, v)| (k, v)).collect();
     sorted.sort_by(|a, b| a.0.cmp(b.0));
 
     // Build data check string
-    let data_check_string: String = sorted.iter().map(|(k, v)| format!("{k}={v}")).collect::<Vec<_>>().join("\n");
+    let data_check_string: String =
+        sorted.iter().map(|(k, v)| format!("{k}={v}")).collect::<Vec<_>>().join("\n");
 
     // Compute HMAC-SHA256
     let secret_key = compute_secret_key(token);
@@ -174,11 +177,7 @@ mod tests {
 
     #[test]
     fn check_signature_invalid() {
-        assert!(!check_signature(
-            "token",
-            "invalid_hash",
-            &[("id".into(), "12345".into())]
-        ));
+        assert!(!check_signature("token", "invalid_hash", &[("id".into(), "12345".into())]));
     }
 
     #[test]
@@ -239,9 +238,8 @@ mod tests {
         let id = "123456789";
         let username = "john_doe";
 
-        let data_check_string = format!(
-            "auth_date={auth_date}\nfirst_name={first_name}\nid={id}\nusername={username}"
-        );
+        let data_check_string =
+            format!("auth_date={auth_date}\nfirst_name={first_name}\nid={id}\nusername={username}");
 
         let mut mac = HmacSha256::new_from_slice(&secret).unwrap();
         mac.update(data_check_string.as_bytes());

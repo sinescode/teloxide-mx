@@ -143,31 +143,47 @@ impl Router {
     }
 
     /// Composes multiple routers into a single handler tree.
+    ///
+    /// Empty routers are skipped. If every router is empty, returns
+    /// [`dptree::entry`].
     pub fn compose(routers: Vec<Router>) -> BoxedHandler {
-        let mut root = dptree::entry();
+        let mut combined: Option<BoxedHandler> = None;
         for router in routers {
+            if router.handlers.is_empty() && router.sub_routers.is_empty() {
+                continue;
+            }
             let handler = router.into_handler();
-            root = root.branch(handler);
+            combined = Some(match combined {
+                None => handler,
+                Some(root) => root.branch(handler),
+            });
         }
-        root
+        combined.unwrap_or_else(dptree::entry)
     }
 
     /// Converts this router into a dptree handler tree.
+    ///
+    /// An empty router becomes [`dptree::entry`]. Sub-routers that are
+    /// themselves empty are skipped so we never branch an entry onto another
+    /// entry (which panics in dptree).
     pub fn into_handler(self) -> BoxedHandler {
-        let mut root = dptree::entry();
+        let mut parts: Vec<BoxedHandler> = self.handlers;
 
-        // Add all direct handlers
-        for handler in self.handlers {
-            root = root.branch(handler);
-        }
-
-        // Add sub-routers
         for sub_router in self.sub_routers {
-            let sub_handler = sub_router.into_handler();
-            root = root.branch(sub_handler);
+            if sub_router.handlers.is_empty() && sub_router.sub_routers.is_empty() {
+                continue;
+            }
+            parts.push(sub_router.into_handler());
         }
 
-        root
+        match parts.len() {
+            0 => dptree::entry(),
+            1 => parts.pop().unwrap(),
+            _ => {
+                let first = parts.remove(0);
+                parts.into_iter().fold(first, |acc, h| acc.branch(h))
+            }
+        }
     }
 }
 

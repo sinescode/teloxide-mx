@@ -5,12 +5,14 @@
 //! you can write `msg.answer("Hello!")` instead of
 //! `bot.send_message(msg.chat.id, "Hello!")`.
 
-use crate::types::{ChatId, InputFile, InputMedia, Message, MessageId, Recipient, ReplyParameters};
+use crate::types::{
+    ChatId, InputFile, InputMedia, InputPollOption, Message, MessageId, Recipient, ReplyParameters,
+};
 use teloxide_max_core::payloads::{
-    SendAnimationSetters, SendAudioSetters, SendContactSetters, SendDiceSetters,
-    SendDocumentSetters, SendMessageSetters, SendPhotoSetters, SendStickerSetters,
-    SendVenueSetters, SendVideoSetters, SendVoiceSetters, SendLocationSetters,
-    UnpinChatMessageSetters,
+    EditMessageCaptionSetters, SendAnimationSetters, SendAudioSetters, SendContactSetters,
+    SendDiceSetters, SendDocumentSetters, SendLocationSetters, SendMediaGroupSetters,
+    SendMessageSetters, SendPhotoSetters, SendPollSetters, SendStickerSetters, SendVenueSetters,
+    SendVideoSetters, SendVoiceSetters, UnpinChatMessageSetters,
 };
 
 /// Extension trait providing [`Message::answer`] and [`Message::reply`] sugar.
@@ -115,8 +117,18 @@ pub trait MessageExt {
     where
         B: crate::requests::Requester;
 
+    /// Copies this message to another chat (aiogram `message.copy_to`).
+    fn copy_to<B>(&self, bot: &B, chat_id: Recipient) -> B::CopyMessage
+    where
+        B: crate::requests::Requester;
+
     /// Edits the text of this message.
     fn edit_text<B>(&self, bot: &B, text: String) -> B::EditMessageText
+    where
+        B: crate::requests::Requester;
+
+    /// Edits the caption of this message (aiogram `message.edit_caption`).
+    fn edit_caption<B>(&self, bot: &B, caption: impl Into<String>) -> B::EditMessageCaption
     where
         B: crate::requests::Requester;
 
@@ -129,6 +141,20 @@ pub trait MessageExt {
     fn edit_reply_markup<B>(&self, bot: &B) -> B::EditMessageReplyMarkup
     where
         B: crate::requests::Requester;
+
+    /// Sends a media group to the same chat (aiogram
+    /// `message.answer_media_group`).
+    fn answer_media_group<B, M>(&self, bot: &B, media: M) -> B::SendMediaGroup
+    where
+        B: crate::requests::Requester,
+        M: IntoIterator<Item = InputMedia>;
+
+    /// Sends a poll to the same chat (aiogram `message.answer_poll`).
+    fn answer_poll<B, Q, O>(&self, bot: &B, question: Q, options: O) -> B::SendPoll
+    where
+        B: crate::requests::Requester,
+        Q: Into<String>,
+        O: IntoIterator<Item = InputPollOption>;
 
     /// Deletes this message.
     fn delete<B>(&self, bot: &B) -> B::DeleteMessage
@@ -206,16 +232,14 @@ impl MessageExt for Message {
     where
         B: crate::requests::Requester,
     {
-        bot.send_animation(self.chat.id, animation)
-            .reply_parameters(ReplyParameters::new(self.id))
+        bot.send_animation(self.chat.id, animation).reply_parameters(ReplyParameters::new(self.id))
     }
 
     fn answer_sticker<B>(&self, bot: &B, sticker: InputFile) -> B::SendSticker
     where
         B: crate::requests::Requester,
     {
-        bot.send_sticker(self.chat.id, sticker)
-            .reply_parameters(ReplyParameters::new(self.id))
+        bot.send_sticker(self.chat.id, sticker).reply_parameters(ReplyParameters::new(self.id))
     }
 
     fn answer_dice<B>(&self, bot: &B) -> B::SendDice
@@ -248,12 +272,7 @@ impl MessageExt for Message {
             .reply_parameters(ReplyParameters::new(self.id))
     }
 
-    fn answer_contact<B>(
-        &self,
-        bot: &B,
-        phone_number: String,
-        first_name: String,
-    ) -> B::SendContact
+    fn answer_contact<B>(&self, bot: &B, phone_number: String, first_name: String) -> B::SendContact
     where
         B: crate::requests::Requester,
     {
@@ -268,11 +287,25 @@ impl MessageExt for Message {
         bot.forward_message(chat_id, self.chat.id, self.id)
     }
 
+    fn copy_to<B>(&self, bot: &B, chat_id: Recipient) -> B::CopyMessage
+    where
+        B: crate::requests::Requester,
+    {
+        bot.copy_message(chat_id, self.chat.id, self.id)
+    }
+
     fn edit_text<B>(&self, bot: &B, text: String) -> B::EditMessageText
     where
         B: crate::requests::Requester,
     {
         bot.edit_message_text(self.chat.id, self.id, text)
+    }
+
+    fn edit_caption<B>(&self, bot: &B, caption: impl Into<String>) -> B::EditMessageCaption
+    where
+        B: crate::requests::Requester,
+    {
+        bot.edit_message_caption(self.chat.id, self.id).caption(caption)
     }
 
     fn edit_media<B>(&self, bot: &B, media: InputMedia) -> B::EditMessageMedia
@@ -287,6 +320,24 @@ impl MessageExt for Message {
         B: crate::requests::Requester,
     {
         bot.edit_message_reply_markup(self.chat.id, self.id)
+    }
+
+    fn answer_media_group<B, M>(&self, bot: &B, media: M) -> B::SendMediaGroup
+    where
+        B: crate::requests::Requester,
+        M: IntoIterator<Item = InputMedia>,
+    {
+        bot.send_media_group(self.chat.id, media).reply_parameters(ReplyParameters::new(self.id))
+    }
+
+    fn answer_poll<B, Q, O>(&self, bot: &B, question: Q, options: O) -> B::SendPoll
+    where
+        B: crate::requests::Requester,
+        Q: Into<String>,
+        O: IntoIterator<Item = InputPollOption>,
+    {
+        bot.send_poll(self.chat.id, question, options)
+            .reply_parameters(ReplyParameters::new(self.id))
     }
 
     fn delete<B>(&self, bot: &B) -> B::DeleteMessage

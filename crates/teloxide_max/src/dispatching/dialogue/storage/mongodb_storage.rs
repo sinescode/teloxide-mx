@@ -6,7 +6,8 @@ use std::{
 
 use futures::future::BoxFuture;
 use mongodb::{
-    bson::{self, doc, Document},
+    bson::{self, doc, spec::BinarySubtype, Binary, Document},
+    options::UpdateOptions,
     Collection, Database,
 };
 use serde::{de::DeserializeOwned, Serialize};
@@ -36,17 +37,13 @@ where
 /// # Example
 ///
 /// ```rust,no_run
-/// use teloxide_max::dispatching::dialogue::{MongoStorage, Json};
+/// use teloxide_max::dispatching::dialogue::{Json, MongoStorage};
 ///
 /// # async fn run() {
-/// let storage = MongoStorage::open(
-///     "mongodb://localhost:27017",
-///     "teloxide_max_db",
-///     "dialogues",
-///     Json,
-/// )
-/// .await
-/// .unwrap();
+/// let storage =
+///     MongoStorage::open("mongodb://localhost:27017", "teloxide_max_db", "dialogues", Json)
+///         .await
+///         .unwrap();
 /// # }
 /// ```
 pub struct MongoStorage<S> {
@@ -83,12 +80,9 @@ impl<S> MongoStorage<S> {
             .create_index(
                 mongodb::IndexModel::builder()
                     .keys(doc! { "chat_id": 1_i32 })
-                    .options(
-                        mongodb::options::IndexOptions::builder()
-                            .unique(true)
-                            .build(),
-                    )
+                    .options(mongodb::options::IndexOptions::builder().unique(true).build())
                     .build(),
+                None,
             )
             .await?;
 
@@ -118,7 +112,7 @@ where
         D: Send + 'static,
     {
         Box::pin(async move {
-            let result = self.collection.delete_one(doc! { "chat_id": chat_id }).await?;
+            let result = self.collection.delete_one(doc! { "chat_id": chat_id }, None).await?;
 
             if result.deleted_count == 0 {
                 return Err(MongoStorageError::DialogueNotFound);
@@ -137,18 +131,17 @@ where
         D: Send + 'static,
     {
         Box::pin(async move {
-            let bytes = self.serializer.serialize(&dialogue).map_err(MongoStorageError::SerdeError)?;
+            let bytes =
+                self.serializer.serialize(&dialogue).map_err(MongoStorageError::SerdeError)?;
+
+            let binary = Binary { subtype: BinarySubtype::Generic, bytes };
 
             // Upsert: insert if not exists, update if exists
             self.collection
                 .update_one(
                     doc! { "chat_id": chat_id },
-                    doc! { "$set": { "chat_id": chat_id, "dialogue": bson::Binary::from(bytes) } },
-                )
-                .with_options(
-                    mongodb::options::UpdateOptions::builder()
-                        .upsert(true)
-                        .build(),
+                    doc! { "$set": { "chat_id": chat_id, "dialogue": binary } },
+                    UpdateOptions::builder().upsert(true).build(),
                 )
                 .await?;
 
@@ -161,13 +154,12 @@ where
         ChatId(chat_id): ChatId,
     ) -> BoxFuture<'static, Result<Option<D>, Self::Error>> {
         Box::pin(async move {
-            let result = self.collection.find_one(doc! { "chat_id": chat_id }).await?;
+            let result = self.collection.find_one(doc! { "chat_id": chat_id }, None).await?;
 
             match result {
                 Some(doc) => {
-                    let binary = match doc.get_binary("dialogue") {
-                        Ok(b) => b,
-                        Err(_) => return Ok(None),
+                    let Some(bson::Bson::Binary(binary)) = doc.get("dialogue").cloned() else {
+                        return Ok(None);
                     };
                     let bytes = binary.bytes;
                     self.serializer

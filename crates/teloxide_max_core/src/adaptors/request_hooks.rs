@@ -7,6 +7,7 @@ use std::{
 };
 
 use futures::ready;
+use url::Url;
 
 use crate::{
     requests::{HasPayload, Output, Payload, Request, Requester},
@@ -18,8 +19,7 @@ use crate::{
 /// # Example
 ///
 /// ```rust,no_run
-/// use teloxide_max_core::adaptors::request_hooks::RequestHooks;
-/// use teloxide_max_core::prelude::*;
+/// use teloxide_max_core::{adaptors::request_hooks::RequestHooks, prelude::*};
 ///
 /// let bot = Bot::from_env().with_hooks(RequestHooks {
 ///     before: |payload_name| {
@@ -30,6 +30,7 @@ use crate::{
 ///     },
 /// });
 /// ```
+#[derive(Clone, Debug)]
 pub struct RequestHooks {
     /// Called before each request is sent.
     /// Receives the payload name (e.g. "SendMessage").
@@ -78,13 +79,12 @@ impl RequestHooks {
 /// # Example
 ///
 /// ```rust,no_run
-/// use teloxide_max_core::adaptors::request_hooks::{RequestHooksAdaptor, RequestHooks};
-/// use teloxide_max_core::prelude::*;
+/// use teloxide_max_core::{
+///     adaptors::request_hooks::{RequestHooks, RequestHooksAdaptor},
+///     prelude::*,
+/// };
 ///
-/// let bot = RequestHooksAdaptor::new(
-///     Bot::from_env(),
-///     RequestHooks::log_all(),
-/// );
+/// let bot = RequestHooksAdaptor::new(Bot::from_env(), RequestHooks::log_all());
 /// ```
 #[derive(Clone, Debug)]
 pub struct RequestHooksAdaptor<B> {
@@ -362,21 +362,17 @@ where
     type SendRef = Send<R::SendRef>;
 
     fn send(self) -> Self::Send {
-        (self.hooks.before)(R::Payload::NAME);
+        let name = R::Payload::NAME;
+        (self.hooks.before)(name);
 
-        Send {
-            hooks: self.hooks.clone(),
-            inner: self.inner.send(),
-        }
+        Send { hooks: self.hooks.clone(), name, inner: self.inner.send() }
     }
 
     fn send_ref(&self) -> Self::SendRef {
-        (self.hooks.before)(R::Payload::NAME);
+        let name = R::Payload::NAME;
+        (self.hooks.before)(name);
 
-        Send {
-            hooks: self.hooks.clone(),
-            inner: self.inner.send_ref(),
-        }
+        Send { hooks: self.hooks.clone(), name, inner: self.inner.send_ref() }
     }
 }
 
@@ -404,11 +400,11 @@ where
     inner: F,
 }
 
-impl<F> Future for Send<F>
+impl<F, T, E> Future for Send<F>
 where
-    F: Future<Output = Result<(), crate::RequestError>>,
+    F: Future<Output = Result<T, E>>,
 {
-    type Output = F::Output;
+    type Output = Result<T, E>;
 
     fn poll(self: Pin<&mut Self>, cx: &mut task::Context<'_>) -> Poll<Self::Output> {
         let this = self.project();

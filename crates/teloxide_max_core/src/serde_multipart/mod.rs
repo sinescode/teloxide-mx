@@ -150,9 +150,7 @@ mod tests {
             UserId(0),
             "name",
             InputSticker {
-                sticker: InputFile::file(
-                    "../../media/teloxide_max-logo.jpg",
-                ),
+                sticker: InputFile::file("../../media/teloxide_max-logo.jpg"),
                 emoji_list: vec!["✈️⚙️".to_owned()],
                 keywords: vec![],
                 mask_position: None,

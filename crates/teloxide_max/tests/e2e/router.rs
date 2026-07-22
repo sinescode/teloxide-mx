@@ -2,9 +2,10 @@
 //!
 //! Tests Router creation, composition, and handler routing.
 
-use teloxide_max::dispatching::router::Router;
-use teloxide_max::dispatching::UpdateFilterExt;
-use teloxide_max::types::Update;
+use teloxide_max::{
+    dispatching::{router::Router, UpdateFilterExt},
+    types::Update,
+};
 
 #[test]
 fn test_router_creation() {

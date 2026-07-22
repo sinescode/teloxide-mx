@@ -272,7 +272,7 @@ mod tests {
     fn send_poll_new_tba_fields_and_edit_rich() {
         use crate::{
             payloads::{EditMessageText, SendPoll},
-            types::{MessageId, PollType},
+            types::MessageId,
         };
         let mut p = SendPoll::new(ChatId(1), "Q?", vec!["a".into(), "b".into()]);
         p.allows_revoting = Some(true);

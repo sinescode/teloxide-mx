@@ -164,8 +164,8 @@ pub enum UpdateKind {
 
     /// An error that happened during deserialization.
     ///
-    /// This allows `teloxide_max` to continue working even if telegram adds a new
-    /// kinds of updates.
+    /// This allows `teloxide_max` to continue working even if telegram adds a
+    /// new kinds of updates.
     ///
     /// **Note that deserialize implementation always returns an empty value**,
     /// teloxide_max fills in the data when doing deserialization.
@@ -645,6 +645,14 @@ mod test {
                     added_to_attachment_menu: false,
                     has_topics_enabled: false,
                     allows_users_to_create_topics: false,
+                can_join_groups: None,
+                can_read_all_group_messages: None,
+                supports_guest_queries: None,
+                supports_inline_queries: None,
+                can_connect_to_business: None,
+                has_main_web_app: None,
+                can_manage_bots: None,
+                supports_join_request_queries: None,
                 }),
                 sender_chat: None,
                 is_topic_message: false,
@@ -1013,6 +1021,14 @@ mod test {
                     added_to_attachment_menu: false,
                     has_topics_enabled: false,
                     allows_users_to_create_topics: false,
+                can_join_groups: None,
+                can_read_all_group_messages: None,
+                supports_guest_queries: None,
+                supports_inline_queries: None,
+                can_connect_to_business: None,
+                has_main_web_app: None,
+                can_manage_bots: None,
+                supports_join_request_queries: None,
                 }),
                 date: DateTime::from_timestamp(1721306082, 0).unwrap(),
                 old_reaction: vec![],
@@ -1195,6 +1211,14 @@ mod test {
                             added_to_attachment_menu: false,
                             has_topics_enabled: false,
                             allows_users_to_create_topics: false,
+                        can_join_groups: None,
+                        can_read_all_group_messages: None,
+                        supports_guest_queries: None,
+                        supports_inline_queries: None,
+                        can_connect_to_business: None,
+                        has_main_web_app: None,
+                        can_manage_bots: None,
+                        supports_join_request_queries: None,
                         },
                     }),
                 },
@@ -1257,6 +1281,14 @@ mod test {
                         added_to_attachment_menu: false,
                         has_topics_enabled: false,
                         allows_users_to_create_topics: false,
+                    can_join_groups: None,
+                    can_read_all_group_messages: None,
+                    supports_guest_queries: None,
+                    supports_inline_queries: None,
+                    can_connect_to_business: None,
+                    has_main_web_app: None,
+                    can_manage_bots: None,
+                    supports_join_request_queries: None,
                     },
                 }),
             }),

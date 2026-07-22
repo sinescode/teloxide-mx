@@ -32,6 +32,13 @@ use std::{
     },
 };
 
+/// Lifecycle hook invoked once before polling starts / after it stops.
+///
+/// Receives a clone of the bot. Used by [`DispatcherBuilder::on_startup`] and
+/// [`DispatcherBuilder::on_shutdown`] (aiogram `@dp.startup` / `@dp.shutdown`
+/// parity).
+pub type LifecycleHook<R> = Arc<dyn Fn(R) -> BoxFuture<'static, ()> + Send + Sync>;
+
 /// The builder for [`Dispatcher`].
 ///
 /// See also: ["Dispatching or
@@ -45,6 +52,8 @@ pub struct DispatcherBuilder<R, Err, Key> {
     ctrlc_handler: bool,
     distribution_f: fn(&Update) -> Option<Key>,
     worker_queue_size: usize,
+    startup_hooks: Vec<LifecycleHook<R>>,
+    shutdown_hooks: Vec<LifecycleHook<R>>,
 }
 
 impl<R, Err, Key> DispatcherBuilder<R, Err, Key>
@@ -109,8 +118,55 @@ where
     ///
     /// By default, it's 8 * 1024 * 1024 bytes (8 MiB).
     #[must_use]
-    #[deprecated(since = "0.15.0", note = "This method is a no-op; you can just remove it.")]
+    #[deprecated(since = "0.0.1", note = "This method is a no-op; you can just remove it.")]
     pub fn stack_size(self, _size: usize) -> Self {
+        self
+    }
+
+    /// Registers a startup hook (aiogram `@dp.startup` parity).
+    ///
+    /// Hooks run once, in registration order, immediately before the update
+    /// listener starts yielding updates. The bot is passed by value (clone).
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use teloxide_max::{dispatching::Dispatcher, dptree, Bot};
+    ///
+    /// # async fn example(bot: Bot) {
+    /// let handler = dptree::entry();
+    /// let dp = Dispatcher::builder(bot, handler)
+    ///     .on_startup(|_bot: Bot| async move {
+    ///         log::info!("dispatcher starting");
+    ///     })
+    ///     .on_shutdown(|_bot: Bot| async move {
+    ///         log::info!("dispatcher stopped");
+    ///     })
+    ///     .build();
+    /// # let _: Dispatcher<_, (), _> = dp;
+    /// # }
+    /// ```
+    #[must_use]
+    pub fn on_startup<H, Fut>(mut self, handler: H) -> Self
+    where
+        H: Fn(R) -> Fut + Send + Sync + 'static,
+        Fut: Future<Output = ()> + Send + 'static,
+    {
+        self.startup_hooks.push(Arc::new(move |bot| Box::pin(handler(bot))));
+        self
+    }
+
+    /// Registers a shutdown hook (aiogram `@dp.shutdown` parity).
+    ///
+    /// Hooks run once, in registration order, after the update listener ends
+    /// (including graceful shutdown via [`ShutdownToken`]).
+    #[must_use]
+    pub fn on_shutdown<H, Fut>(mut self, handler: H) -> Self
+    where
+        H: Fn(R) -> Fut + Send + Sync + 'static,
+        Fut: Future<Output = ()> + Send + 'static,
+    {
+        self.shutdown_hooks.push(Arc::new(move |bot| Box::pin(handler(bot))));
         self
     }
 
@@ -127,10 +183,10 @@ where
     /// state, then you may want to process some updates sequentially, to
     /// prevent state inconsistencies.
     ///
-    /// This is why `teloxide_max` allows grouping updates. Updates for which the
-    /// distribution function `f` returns the same "distribution key" `K` will
-    /// be run in sequence (while still being processed concurrently with the
-    /// updates with different distribution keys).
+    /// This is why `teloxide_max` allows grouping updates. Updates for which
+    /// the distribution function `f` returns the same "distribution key"
+    /// `K` will be run in sequence (while still being processed
+    /// concurrently with the updates with different distribution keys).
     ///
     /// Updates for which `f` returns `None` will always be processed in
     /// parallel.
@@ -186,6 +242,8 @@ where
             ctrlc_handler,
             distribution_f: _,
             worker_queue_size,
+            startup_hooks,
+            shutdown_hooks,
         } = self;
 
         DispatcherBuilder {
@@ -197,6 +255,8 @@ where
             ctrlc_handler,
             distribution_f: f,
             worker_queue_size,
+            startup_hooks,
+            shutdown_hooks,
         }
     }
 
@@ -216,6 +276,8 @@ where
             distribution_f,
             worker_queue_size,
             ctrlc_handler,
+            startup_hooks,
+            shutdown_hooks,
         } = self;
 
         dptree::type_check(
@@ -244,6 +306,8 @@ where
             default_worker: None,
             current_number_of_active_workers: Default::default(),
             max_number_of_active_workers: Default::default(),
+            startup_hooks,
+            shutdown_hooks,
         };
 
         #[cfg(feature = "ctrlc_handler")]
@@ -290,6 +354,9 @@ pub struct Dispatcher<R, Err, Key> {
     error_handler: Arc<dyn ErrorHandler<Err> + Send + Sync>,
 
     state: ShutdownToken,
+
+    startup_hooks: Vec<LifecycleHook<R>>,
+    shutdown_hooks: Vec<LifecycleHook<R>>,
 }
 
 struct Worker {
@@ -331,6 +398,8 @@ where
             ctrlc_handler: false,
             worker_queue_size: DEFAULT_WORKER_QUEUE_SIZE,
             distribution_f: default_distribution_function,
+            startup_hooks: Vec::new(),
+            shutdown_hooks: Vec::new(),
         }
     }
 }
@@ -339,7 +408,7 @@ impl<R, Err, Key> Dispatcher<R, Err, Key>
 where
     R: Requester + Clone + Send + Sync + 'static,
     Err: Send + Sync + 'static,
-    Key: Hash + Eq + Clone + Send,
+    Key: Hash + Eq + Clone + Send + 'static,
 {
     /// Starts your bot with the default parameters.
     ///
@@ -407,6 +476,11 @@ where
         self.dependencies.insert(me);
         self.dependencies.insert(self.bot.clone());
 
+        // aiogram-style startup hooks (before listening)
+        for hook in &self.startup_hooks {
+            hook(self.bot.clone()).await;
+        }
+
         let description = self.handler.description();
         let allowed_updates = description.allowed_updates();
         log::debug!("hinting allowed updates: {allowed_updates:?}");
@@ -414,6 +488,11 @@ where
 
         let stop_token = Some(update_listener.stop_token());
         self.start_listening(update_listener, update_listener_error_handler, stop_token).await;
+
+        // aiogram-style shutdown hooks (after listening ends)
+        for hook in &self.shutdown_hooks {
+            hook(self.bot.clone()).await;
+        }
 
         Ok(())
     }
@@ -632,6 +711,9 @@ where
                     default_worker: None,
                     current_number_of_active_workers: Default::default(),
                     max_number_of_active_workers: Default::default(),
+                    // Multi-bot workers do not re-run root lifecycle hooks.
+                    startup_hooks: Vec::new(),
+                    shutdown_hooks: Vec::new(),
                 };
 
                 let err_handler =

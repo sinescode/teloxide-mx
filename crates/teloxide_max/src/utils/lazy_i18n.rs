@@ -22,10 +22,9 @@
 //! # }
 //! ```
 
-use std::fmt;
-use std::sync::Arc;
+use std::{fmt, sync::Arc};
 
-use crate::utils::i18n::I18nLoader;
+use crate::utils::i18n::I18nContext;
 
 /// A lazy translation proxy that translates on display, not at creation.
 ///
@@ -35,24 +34,29 @@ use crate::utils::i18n::I18nLoader;
 pub struct LazyTranslation {
     key: String,
     params: Vec<(String, String)>,
-    loader: Option<Arc<I18nLoader>>,
+    context: Option<Arc<I18nContext>>,
 }
 
 impl LazyTranslation {
     /// Creates a new lazy translation with just a key.
     pub fn new(key: impl Into<String>) -> Self {
-        Self { key: key.into(), params: Vec::new(), loader: None }
+        Self { key: key.into(), params: Vec::new(), context: None }
     }
 
     /// Creates a lazy translation with format parameters.
     pub fn with_params(key: impl Into<String>, params: Vec<(String, String)>) -> Self {
-        Self { key: key.into(), params, loader: None }
+        Self { key: key.into(), params, context: None }
     }
 
-    /// Sets the i18n loader for translation.
-    pub fn with_loader(mut self, loader: Arc<I18nLoader>) -> Self {
-        self.loader = Some(loader);
+    /// Sets the i18n context used for translation at display time.
+    pub fn with_context(mut self, context: Arc<I18nContext>) -> Self {
+        self.context = Some(context);
         self
+    }
+
+    /// Alias for [`with_context`] for aiogram-style naming.
+    pub fn with_loader(self, context: Arc<I18nContext>) -> Self {
+        self.with_context(context)
     }
 
     /// Returns the translation key.
@@ -65,14 +69,13 @@ impl LazyTranslation {
         &self.params
     }
 
-    /// Forces translation using the stored loader.
+    /// Forces translation using the stored context.
     ///
-    /// If no loader is set, returns the key itself as fallback.
+    /// If no context is set, returns the key itself as fallback.
     pub fn force_translate(&self) -> String {
-        match &self.loader {
-            Some(loader) => {
-                let template = loader.translate(&self.key);
-                let mut result = template;
+        match &self.context {
+            Some(ctx) => {
+                let mut result = ctx.translate(&self.key);
                 for (placeholder, value) in &self.params {
                     result = result.replace(&format!("{{{placeholder}}}"), value);
                 }
@@ -157,10 +160,7 @@ mod tests {
 
     #[test]
     fn lazy_translation_with_params() {
-        let lt = LazyTranslation::with_params(
-            "greeting",
-            vec![("name".into(), "Alice".into())],
-        );
+        let lt = LazyTranslation::with_params("greeting", vec![("name".into(), "Alice".into())]);
         assert_eq!(lt.key(), "greeting");
         assert_eq!(lt.params().len(), 1);
     }
