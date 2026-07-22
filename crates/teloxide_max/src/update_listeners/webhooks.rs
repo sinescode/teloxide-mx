@@ -250,17 +250,3 @@ fn check_secret(bytes: &[u8]) -> Result<&[u8], &'static str> {
 
     Ok(bytes)
 }
-
-/// Returns first (`.0`) field from a tuple as a `&mut` reference.
-///
-/// This hack is needed because there isn't currently a way to easily force a
-/// closure to be higher-ranked (`for<'a> &'a mut _ -> &'a mut _`) which causes
-/// problems when using [`StatefulListener`] to implement update listener.
-///
-/// This could be probably removed once [rfc#3216] is implemented.
-///
-/// [`StatefulListener`]:
-/// [rfc#3216]: https://github.com/rust-lang/rfcs/pull/3216
-fn tuple_first_mut<A, B>(tuple: &mut (A, B)) -> &mut A {
-    &mut tuple.0
-}

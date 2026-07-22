@@ -327,7 +327,7 @@ fn axum_no_setup_inner(
     (listener, stop_flag, app)
 }
 
-/// HRTB-friendly accessor — see `tuple_first_mut` in the parent module.
+/// HRTB-friendly stream accessor for [`StatefulListener`] (named fn forces HRTB).
 fn listener_stream_mut(
     state: &mut (
         tokio_stream::wrappers::UnboundedReceiverStream<Result<Update, Infallible>>,

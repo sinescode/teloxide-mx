@@ -55,15 +55,10 @@ pub trait EventIsolation: Send + Sync + 'static {
 /// RAII guard returned by [`EventIsolation::lock`].
 ///
 /// Holding the guard keeps the key locked. Dropping it releases the lock.
+/// The optional mutex guard is never read; it exists so `Drop` unlocks the key.
 pub struct IsolationGuard {
-    _inner: IsolationGuardInner,
-}
-
-enum IsolationGuardInner {
-    /// Real mutex guard from [`SimpleEventIsolation`].
-    Mutex(OwnedMutexGuard<()>),
-    /// No-op guard from [`DisabledEventIsolation`].
-    Disabled,
+    #[allow(dead_code)]
+    _lock: Option<OwnedMutexGuard<()>>,
 }
 
 /// No isolation — every lock acquires immediately (aiogram
@@ -81,7 +76,7 @@ impl DisabledEventIsolation {
 #[async_trait::async_trait]
 impl EventIsolation for DisabledEventIsolation {
     async fn lock(&self, _key: &DialogueKey) -> IsolationGuard {
-        IsolationGuard { _inner: IsolationGuardInner::Disabled }
+        IsolationGuard { _lock: None }
     }
 
     async fn close(&self) {}
@@ -114,7 +109,7 @@ impl EventIsolation for SimpleEventIsolation {
     async fn lock(&self, key: &DialogueKey) -> IsolationGuard {
         let mtx = self.mutex_for(key).await;
         let guard = mtx.lock_owned().await;
-        IsolationGuard { _inner: IsolationGuardInner::Mutex(guard) }
+        IsolationGuard { _lock: Some(guard) }
     }
 
     async fn close(&self) {

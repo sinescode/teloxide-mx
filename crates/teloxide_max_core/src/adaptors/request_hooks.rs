@@ -50,12 +50,12 @@ impl RequestHooks {
     /// Creates hooks that only log requests.
     pub fn log_all() -> Self {
         Self {
-            before: |name| log::trace!("Sending `{}` request", name),
+            before: |name| log::trace!("Sending `{name}` request"),
             after: |name, ok| {
                 if ok {
-                    log::trace!("Got OK from `{}` request", name);
+                    log::trace!("Got OK from `{name}` request");
                 } else {
-                    log::trace!("Got error from `{}` request", name);
+                    log::trace!("Got error from `{name}` request");
                 }
             },
         }

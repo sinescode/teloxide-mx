@@ -123,10 +123,19 @@ jobs:
           shared-key: test-${{ matrix.rust }}
           cache-on-failure: true
 
-      # MSRV pin slot — fill with `cargo update -p … --precise …` when needed
+      # Keep lockfile MSRV-friendly: some crates (darling 0.23 via serde_with_macros
+      # 3.21, home 0.5.12, ar_archive_writer 0.5) require rustc 1.88+.
       - name: Downgrade deps for MSRV
         if: matrix.rust == 'msrv'
-        run: exit 0
+        run: |
+          set -euo pipefail
+          cargo +${{ matrix.toolchain }} update -p serde_with --precise 3.14.0
+          cargo +${{ matrix.toolchain }} update -p serde_with_macros --precise 3.14.0
+          cargo +${{ matrix.toolchain }} update -p home --precise 0.5.11
+          cargo +${{ matrix.toolchain }} update -p ar_archive_writer --precise 0.4.2 \
+            || cargo +${{ matrix.toolchain }} update -p psm --precise 0.1.21 \
+            || true
+
 
       - name: Install redis + psql
         run: |
