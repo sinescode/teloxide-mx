@@ -1,4 +1,5 @@
-//! Event isolation for concurrent FSM updates (aiogram `BaseEventIsolation` parity).
+//! Event isolation for concurrent FSM updates (aiogram `BaseEventIsolation`
+//! parity).
 //!
 //! When two updates for the same dialogue key arrive at once, handlers can race
 //! and corrupt dialogue state. Isolation serializes handling per key.
@@ -6,11 +7,13 @@
 //! # Examples
 //!
 //! ```
-//! use teloxide_max::dispatching::event_isolation::{
-//!     EventIsolation, SimpleEventIsolation,
+//! use teloxide_max::{
+//!     dispatching::{
+//!         dialogue::strategy::DialogueKey,
+//!         event_isolation::{EventIsolation, SimpleEventIsolation},
+//!     },
+//!     types::ChatId,
 //! };
-//! use teloxide_max::dispatching::dialogue::strategy::DialogueKey;
-//! use teloxide_max::types::ChatId;
 //!
 //! # #[tokio::main(flavor = "current_thread")]
 //! # async fn main() {
@@ -63,7 +66,8 @@ enum IsolationGuardInner {
     Disabled,
 }
 
-/// No isolation — every lock acquires immediately (aiogram `DisabledEventIsolation`).
+/// No isolation — every lock acquires immediately (aiogram
+/// `DisabledEventIsolation`).
 #[derive(Debug, Default, Clone, Copy)]
 pub struct DisabledEventIsolation;
 
@@ -163,6 +167,7 @@ mod tests {
             let isolation = Arc::clone(&isolation);
             let counter = Arc::clone(&counter);
             let max_seen = Arc::clone(&max_seen);
+            let key = key.clone();
             handles.push(tokio::spawn(async move {
                 let _g = isolation.lock(&key).await;
                 let cur = counter.fetch_add(1, Ordering::SeqCst) + 1;

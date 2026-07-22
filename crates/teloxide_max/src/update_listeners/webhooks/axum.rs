@@ -1,7 +1,7 @@
 use std::{
     convert::Infallible,
     future::Future,
-    net::SocketAddr,
+    net::{IpAddr, SocketAddr},
     pin::Pin,
     sync::{Arc, Mutex},
 };
@@ -213,7 +213,7 @@ fn axum_no_setup_inner(
         State(WebhookState { secret, flag, mut tx, ip_filter }): State<WebhookState>,
         secret_header: XTelegramBotApiSecretToken,
         headers: HeaderMap,
-        connect_info: Option<ConnectInfo<SocketAddr>>,
+        peer: OptionalPeerIp,
         input: String,
     ) -> impl IntoResponse {
         use crate::utils::webhook_security::constant_time_eq;
@@ -236,8 +236,8 @@ fn axum_no_setup_inner(
                     v.to_str().ok().map(|s| (k.as_str().to_ascii_lowercase(), s.to_owned()))
                 })
                 .collect();
-            let client_ip = extract_client_ip(&header_map)
-                .or_else(|| connect_info.map(|ConnectInfo(addr)| addr.ip().to_string()));
+            let client_ip =
+                extract_client_ip(&header_map).or_else(|| peer.0.map(|ip| ip.to_string()));
 
             match client_ip {
                 Some(ip) if filter.is_allowed(&ip) => {}
@@ -310,20 +310,18 @@ fn axum_no_setup_inner(
         (stream, stop_token, rebind),
         listener_stream_mut,
         |state: &mut ListenerState| state.1.clone(),
-        Some(
-            move |state: &mut ListenerState, hint: &mut dyn Iterator<Item = AllowedUpdate>| {
-                let updates: Vec<AllowedUpdate> = hint.collect();
-                if let Ok(mut guard) = allowed_slot.lock() {
-                    *guard = Some(updates.clone());
-                }
-                // Re-issue set_webhook with the dispatcher-derived allow-list.
-                if let Some(rebind) = state.2.clone() {
-                    tokio::spawn(async move {
-                        rebind(updates).await;
-                    });
-                }
-            },
-        ),
+        Some(move |state: &mut ListenerState, hint: &mut dyn Iterator<Item = AllowedUpdate>| {
+            let updates: Vec<AllowedUpdate> = hint.collect();
+            if let Ok(mut guard) = allowed_slot.lock() {
+                *guard = Some(updates.clone());
+            }
+            // Re-issue set_webhook with the dispatcher-derived allow-list.
+            if let Some(rebind) = state.2.clone() {
+                tokio::spawn(async move {
+                    rebind(updates).await;
+                });
+            }
+        }),
     );
 
     (listener, stop_flag, app)
@@ -399,5 +397,27 @@ impl<S> FromRequestParts<S> for XTelegramBotApiSecretToken {
             .map(Self);
 
         async { res }
+    }
+}
+
+/// Optional TCP peer IP (present when served via
+/// `into_make_service_with_connect_info`).
+///
+/// Unlike `Option<ConnectInfo<_>>`, this is always a valid extractor: missing
+/// connect-info becomes `None` instead of a handler type error.
+struct OptionalPeerIp(Option<IpAddr>);
+
+impl<S> FromRequestParts<S> for OptionalPeerIp
+where
+    S: Send + Sync,
+{
+    type Rejection = Infallible;
+
+    fn from_request_parts(
+        parts: &mut Parts,
+        _state: &S,
+    ) -> impl Future<Output = Result<Self, Self::Rejection>> + Send {
+        let ip = parts.extensions.get::<ConnectInfo<SocketAddr>>().map(|ConnectInfo(a)| a.ip());
+        async move { Ok(Self(ip)) }
     }
 }
